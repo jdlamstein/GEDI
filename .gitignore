@@ -1,0 +1,10 @@
+/keys
+/gcloud_training_2
+/gcloud_training-2
+/logs
+/keras_tfrecord-master
+/*.csv
+/*.log
+/*.md
+/__pycache__
+/Processed_
