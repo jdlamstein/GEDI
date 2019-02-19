@@ -73,6 +73,7 @@ In order for GCS to recognize that your computer is connected to your billing ac
  
  This is a keras version of GEDI CNN that trains on top of Inception V3. So far, I have trained on ~20000 images using tfrecords, adding more images will require multiple tfrecords to size considerations and I'll need to adjust the data pipeline. I'm considering rewriting this in Tensorflow instead of keras. I use the tensorflow data api, so that data will be loaded in small portions with a data generator rather than loading all the data into the ml-engine at once. The computer doesn't have enough memory to load all the memory at once. Keras is built to run with Tensorflow and Theano and making Keras work with the TF Data API is relatively new because it's exclusive to tensorflow and not applicable to Theano. While keras works with TF data, tensorboard is throwing errors because keras writes the tensorboard file faster than GCS allows. So, I think tensorflow is better at the moment. 
   
+  When you run this, you'll need to change filepaths, and connect the script to your own key. 
 
  
   
