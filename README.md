@@ -1,5 +1,3 @@
-README
-
 GEDI machine learning for GCS (Google Cloud Storage).
 
 # Setting up GCS
