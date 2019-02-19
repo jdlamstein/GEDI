@@ -1,4 +1,4 @@
-ew#!/usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Model copies baseline_vgg16.py. Expect to update it to use more recent model structure. Look at Densenet, Inception, hGru, fGru. 

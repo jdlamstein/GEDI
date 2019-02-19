@@ -5,6 +5,5 @@
 /keras_tfrecord-master
 /*.csv
 /*.log
-/*.md
 /__pycache__
 /Processed_
