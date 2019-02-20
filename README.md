@@ -60,12 +60,19 @@ In order for GCS to recognize that your computer is connected to your billing ac
  The arguments are:
  
  $JOB_NAME - which is the name of this particular training.
+ 
  --stream-logs - show logs from a running Cloud ML Engine job
+ 
  --runtime-version - Tensorflow version, currently uses 1.12.0
+ 
  --python-version - the python version
+ 
  --job-dir - Path to save model and logs. 
+ 
  --package-path - specifies the local path to the root directory of your application
+ 
  --module-name -  specifies the name of your application's main module
+ 
  --region - specifies region where GCS servers will run the model, should be region close to you
  
  # Description of Model
