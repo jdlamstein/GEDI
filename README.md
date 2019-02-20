@@ -59,7 +59,7 @@ In order for GCS to recognize that your computer is connected to your billing ac
  where 'gcloud ml-engine jobs submit training' announces we're launching a machine learning job. 
  The arguments are:
  
- $JOB_NAME - which is the name of this particular training. 
+ $JOB_NAME - which is the name of this particular training.
  --stream-logs - show logs from a running Cloud ML Engine job
  --runtime-version - Tensorflow version, currently uses 1.12.0
  --python-version - the python version
