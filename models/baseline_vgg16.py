@@ -2,6 +2,7 @@ import numpy as np
 import tensorflow as tf
 
 
+
 class model_struct:
     """
     A trainable version VGG16.
