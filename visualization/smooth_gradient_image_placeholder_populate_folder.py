@@ -1,8 +1,7 @@
 """
 To do:
-    save_images - get predictions from algorithm. 
-    I think model is predictin 1 for live, 0 for dead. Or it's a data issue. 
-    test_vgg16_placeholder works, I think it's that dead is 1 and live is 0
+    Get rid of dead vs live, just take images, get prediction, get gradient
+
 
 """
 
@@ -160,8 +159,12 @@ def save_images(
         plt.close(f)
 
 #iviz.squeeze()
+
+
 def visualization_function(images, viz):
+
     """Wrapper for summarizing visualizations across channels."""
+
     if viz == 'sum_abs':
         return np.sum(np.abs(images), axis=-1)
     elif viz == 'sum_p':
@@ -186,9 +189,11 @@ def crop_center(img, crop_size):
     starty = y // 2 - (cy // 2)
     return img[starty:starty + cy, startx:startx + cx]
 
+
 def crop_and_save(savename,img, crop_size):
     im = crop_center(img, crop_size)
     imageio.imwrite(savename, im)
+
 
 def renormalize(img, max_value, min_value):
     """Normalize images to [0, 1]."""
@@ -204,7 +209,8 @@ def image_batcher(
         training_max,
         training_min,
         num_channels=3,
-        per_timepoint=False):
+        per_timepoint=False,
+        output_folder = ''):
     """Placeholder image/label batch loader."""
     for b in range(num_batches):
         next_image_batch = images[start:start + config.validation_batch]
@@ -228,10 +234,7 @@ def image_batcher(
                     # 2. Repeat to 3 channel (RGB) image
                     patch = np.repeat(patch[:, :, None], 3, axis=-1)
                     # 3. Renormalize based on the training set intensities
-                    patch = renormalize(
-                        patch,
-                        max_value=training_max,
-                        min_value=training_min)
+                    patch = renormalize(patch,max_value=training_max,min_value=training_min)
                     print('max patch', np.max(patch))
 
                     # 4. Crop the center
@@ -239,7 +242,7 @@ def image_batcher(
                     # 5. Clip to [0, 1] just in case
                     patch[patch > 1.] = 1.
                     patch[patch < 0.] = 0.
-                    imageio.imwrite(os.path.join(output_folder, 'cropped', ) , patch)
+                    imageio.imwrite(os.path.join(output_folder, 'cropped', ), patch)
                     # 6. Add to list
                     image_stack += [patch[None, :, :, :]]
                     output_files += ['f_%s' % channel]
@@ -270,8 +273,7 @@ def image_batcher(
                 output_files = np.copy(next_image_batch)
         # Add dimensions and concatenate
         start += config.validation_batch
-        yield np.concatenate(
-            image_stack, axis=0), label_stack, output_files
+        yield np.concatenate(image_stack, axis=0), label_stack, output_files
 
 
 def randomization_test(y, yhat, iterations=10000):
@@ -314,6 +316,7 @@ def visualize_model(
     combined_labels = np.concatenate((
         np.ones(len(live_files)),
         np.zeros(len(dead_files))))
+    label_dictionary = {0: 'Dead', 1: 'Live'}
 #    combined_labels = np.concatenate((
 #        np.zeros(len(live_files)),
 #        np.ones(len(dead_files))))
@@ -405,9 +408,9 @@ def visualize_model(
         # Set up exemplar threading
         saver.restore(sess, c)
         start_time = time.time()
-        num_batches = np.floor(
-            len(combined_files) / float(
-                config.validation_batch)).astype(int)
+        num_batches = np.floor(len(combined_files) / float(config.validation_batch)).astype(int)
+        print('num batches', num_batches)
+        print('len combined files', len(combined_files))
         for image_batch, label_batch, file_batch in tqdm(
                 image_batcher(
                     start=0,
@@ -418,8 +421,8 @@ def visualize_model(
                     training_max=training_max,
                     training_min=training_min,
                     num_channels=num_channels,
-                    per_timepoint=per_timepoint),
-                total=num_batches):
+                    per_timepoint=per_timepoint,
+                    output_folder=output_folder)):
             feed_dict = {
                 images: image_batch,
                 labels: label_batch
@@ -452,15 +455,17 @@ def visualize_model(
             it_grads = np.uint16(it_grads)
             print('grad i max uint16', np.max(it_grads))
             print('grad i min uint16', np.min(it_grads))
-            for grad_i, pred_i, file_i, label_i in zip(
-                    it_grads, tyh, file_batch, label_batch):
+
+            for grad_i, pred_i, file_i, label_i in zip(it_grads, tyh, file_batch, label_batch):
+                grad_folder = os.path.join(output_folder, 'heatmaps', label_dictionary[label_i])
+                if not os.path.exists(grad_folder):
+                    os.makedirs(grad_folder)
                 out_pointer = os.path.join(
-                    output_folder,
+                    grad_folder,
                     file_i.split(os.path.sep)[-1])
                 out_pointer = out_pointer.split('.')[0] + '.tif'
 #                f = plt.figure()
 
-                
                 imageio.imwrite(out_pointer, grad_i)
 #                plt.imshow(grad_i)
 #                plt.title('Pred=%s, label=%s' % (pred_i, label_batch))
@@ -468,34 +473,34 @@ def visualize_model(
 #                plt.close(f)
 
             # Plot a moisaic of the grads
-            if viz == 'none':
-                pos_grads = normalize(np.maximum(it_grads, 0))
-                neg_grads = normalize(np.minimum(it_grads, 0))
-                alpha_mosaic(
-                    image_batch,
-                    pos_grads,
-                    'pos_batch_%s.pdf' % count,
-                    title='Positive gradient overlays.',
-                    rc=1,
-                    cc=len(image_batch),
-                    cmap=plt.cm.Reds)
-                alpha_mosaic(
-                    image_batch,
-                    neg_grads,
-                    'neg_batch_%s.pdf' % count,
-                    title='Negative gradient overlays.',
-                    rc=1,
-                    cc=len(image_batch),
-                    cmap=plt.cm.Reds)
-            else:
-                alpha_mosaic(
-                    image_batch,
-                    it_grads,
-                    output_folder + '/batch_%s.pdf' % count,
-                    title='Gradient overlays.',
-                    rc=1,
-                    cc=len(image_batch),
-                    cmap=plt.cm.Reds)
+            # if viz == 'none':
+            #     pos_grads = normalize(np.maximum(it_grads, 0))
+            #     neg_grads = normalize(np.minimum(it_grads, 0))
+            #     alpha_mosaic(
+            #         image_batch,
+            #         pos_grads,
+            #         'pos_batch_%s.pdf' % count,
+            #         title='Positive gradient overlays.',
+            #         rc=1,
+            #         cc=len(image_batch),
+            #         cmap=plt.cm.Reds)
+            #     alpha_mosaic(
+            #         image_batch,
+            #         neg_grads,
+            #         'neg_batch_%s.pdf' % count,
+            #         title='Negative gradient overlays.',
+            #         rc=1,
+            #         cc=len(image_batch),
+            #         cmap=plt.cm.Reds)
+            # else:
+            #     alpha_mosaic(
+            #         image_batch,
+            #         it_grads,
+            #         output_folder + '/batch_%s.pdf' % count,
+            #         title='Gradient overlays.',
+            #         rc=1,
+            #         cc=len(image_batch),
+            #         cmap=plt.cm.Reds)
             count += 1
 
             # Store the results
@@ -505,7 +510,7 @@ def visualize_model(
             file_array = np.append(file_array, file_batch)
             viz_images += [it_grads]
             
-            for _im, file_i in zip(image_batch, file_batch):
+            for _im, file_i, label_i in zip(image_batch, file_batch, label_batch):
                 '''Saves cropped input images for comparison'''
 #                print(np.unique(_im))
                 print('shape', np.shape(_im))
@@ -516,7 +521,7 @@ def visualize_model(
                 print(_im.dtype)
                 print('max _im', np.max(_im))
                 print('min _im', np.min(_im))
-                crop_folder = os.path.join(output_folder, 'cropped')
+                crop_folder = os.path.join(output_folder, 'cropped', label_dictionary[label_i])
                 if not os.path.exists(crop_folder):
                     os.makedirs(crop_folder)
                 out_pointer = os.path.join(
@@ -524,8 +529,7 @@ def visualize_model(
                     file_i.split(os.path.sep)[-1])
                 out_pointer = out_pointer.split('.')[0] + '.tif'
                 imageio.imwrite(out_pointer, _im)
-                
-                
+
         ckpt_yhat.append(yhat)
         ckpt_y.append(y)
         ckpt_scores.append(dec_scores)
@@ -577,7 +581,7 @@ if __name__ == '__main__':
         "--dead_ims",
         type=str,
         dest="dead_ims",
-        default='/mnt/data/Desktop/ScientistLiveDead/BSDead',
+        default='/mnt/data/ScientistLiveDead/BSDead',
         help="Directory containing your Dead .tiff images.")
     parser.add_argument(
         "--model_file",

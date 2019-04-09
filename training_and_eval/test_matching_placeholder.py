@@ -145,13 +145,13 @@ def test_placeholder(
         # Load the model's config
         config = np.load(model_meta).item()
     except:
-        print 'Could not load model config, falling back to default config.'
+        print('Could not load model config, falling back to default config.')
     config.model_image_size[-1] = 1
     try:
         # Load autopsy information
         autopsy_data = pd.read_csv(autopsy_csv)
     except IOError:
-        print 'Unable to load autopsy file.'
+        print('Unable to load autopsy file.')
     if not hasattr(config, 'include_GEDI'):
         raise RuntimeError('You need to pass the correct meta file.')
         config.include_GEDI = True
@@ -170,7 +170,7 @@ def test_placeholder(
 
     # Make output directories if they do not exist
     dt_stamp = re.split(
-        '\.', str(datetime.now()))[0].\
+        '\.', str(datetime.now()))[0]. \
         replace(' ', '_').replace(':', '_').replace('-', '_')
     dt_dataset = config.which_dataset + '_' + dt_stamp + '/'
     config.train_checkpoint = os.path.join(
@@ -245,7 +245,7 @@ def test_placeholder(
             raise NotImplementedError(autopsy_model)
 
     if config.validation_batch > len(combined_files):
-        print (
+        print(
             'Trimming validation_batch size to %s '
             '(same as # of files).' % len(combined_files))
         config.validation_batch = len(combined_files)
@@ -287,8 +287,8 @@ def test_placeholder(
                 feed_dict=feed_dict)
             score_array += [activity]
         file_array += [file_batch]
-    print 'Image processing %d took %.1f seconds' % (
-        idx, time.time() - start_time)
+    print('Image processing %d took %.1f seconds' % (
+        idx, time.time() - start_time))
     sess.close()
     score_array = np.concatenate(score_array, axis=0)
     score_array = score_array.reshape(-1, score_array.shape[-1])
@@ -342,9 +342,9 @@ def test_placeholder(
         clf.fit(score_array, labels)
         # mu = dec_scores.mean(0)
         # sd = dec_scores.std(0)
-        print '%s-fold SVM performance: accuracy = %s%%' % (
+        print('%s-fold SVM performance: accuracy = %s%%' % (
             k_folds,
-            np.mean(cv_performance * 100))
+            np.mean(cv_performance * 100)))
         np.savez(
             os.path.join(out_dir, 'svm_data'),
             yhat=score_array,
@@ -363,7 +363,7 @@ def test_placeholder(
             columns=['dim1', 'dim2', 'pathology', 'filename'])
         out_name = os.path.join(out_dir, 'raw_embedding.csv')
         df.to_csv(out_name)
-        print 'Saved csv to: %s' % out_name
+        print('Saved csv to: %s' % out_name)
 
         create_figs(
             emb=emb,
@@ -384,7 +384,7 @@ def test_placeholder(
             columns=['dim1', 'dim2', 'pathology', 'filename'])
         out_name = os.path.join(out_dir, 'embedding.csv')
         df.to_csv(out_name)
-        print 'Saved csv to: %s' % out_name
+        print('Saved csv to: %s' % out_name)
 
         # Create plot
         create_figs(
@@ -417,13 +417,14 @@ if __name__ == '__main__':
         '--model_file',
         type=str,
         dest='model_file',
-        default='/media/data/GEDI/drew_images/project_files/train_checkpoint/gfp_2018_03_25_10_25_10/gfp_2018_03_27_14_05_49/model_85000.ckpt-85000',  # None,
+        default='/mnt/data/MATCHING/DrewSiameseModel/model_86000.ckpt',
+        # None,
         help='Path to the model checkpoint file.')
     parser.add_argument(
         '--model_meta',
         type=str,
         dest='model_meta',
-        default='/media/data/GEDI/drew_images/project_files/results/gfp_2018_03_27_14_05_49/meta_info.npy',  # None,
+        default='/mnt/data/MATCHING/DrewSiameseModel/meta_info.npy',  # None,
         help='Path to the model meta file.')
     parser.add_argument(
         '--n_images',
