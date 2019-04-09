@@ -1,3 +1,11 @@
+"""
+To do:
+    Get loss
+    Get accuracies
+
+"""
+
+
 import os
 import time
 import re
@@ -54,6 +62,7 @@ def process_image(
     """Process images for the matching model with numpy."""
     image = io.imread(filename).astype(np.float32)
     im_shape = image.shape
+    # print('im_shape', im_shape)
     if len(im_shape) == 3:
         # Multi-timestep image
         image = image[channel_number]
@@ -63,6 +72,7 @@ def process_image(
         raise RuntimeError('Cannot understand the dimensions of your image.')
     if 3 * im_shape[0] == im_shape[1]:
         split_image = np.split(image, 3, axis=-1)
+        # print('split image', np.shape(split_image))
 
         # Insert augmentation and preprocessing here
         ims, filenames = [], []
@@ -83,6 +93,7 @@ def process_image(
         if normalize:
             ims /= (ims.max() + 1e-12)
             ims = np.maximum(np.minimum(ims, 1), 0)
+    # print('ims shape', np.shape(ims))
     return ims, np.asarray(filenames)
 
 
@@ -95,6 +106,8 @@ def image_batcher(
         n_images):
     for b in range(num_batches):
         next_image_batch = images[start:start + config.validation_batch]
+        # print('val batch', config.validation_batch)
+        # print('next image batch', next_image_batch)
         image_stack = []
         image_filenames = []
         for f in next_image_batch:
@@ -114,10 +127,14 @@ def image_batcher(
             #    'Unfinished multi-image processing.')
             image_filenames += [filenames]
             # 3. Add to list
+            # print('patch shape', pshape)
             if len(pshape) < 4:
                 patches = np.expand_dims(patches, axis=-1)
+            # print('patches', np.shape(patches))
+
             image_stack += [patches]
         # Add dimensions and concatenate
+        # print('image stack', np.shape(image_stack))
         start += config.validation_batch
         yield np.asarray(image_stack), np.asarray(image_filenames)
 
@@ -128,7 +145,7 @@ def test_placeholder(
         model_meta,
         out_dir,
         n_images=3,
-        first_n_images=1,
+        first_n_images=3,
         debug=True,
         margin=.1,
         autopsy_csv=None,
@@ -137,6 +154,7 @@ def test_placeholder(
         embedding_type='tsne',
         autopsy_model='match'):
     config = GEDIconfig()
+    print('1st config', config.validation_batch)
     assert margin is not None, 'Need a margin for the loss.'
     assert image_path is not None, 'Provide a path to an image directory.'
     assert model_file is not None, 'Provide a path to the model file.'
@@ -243,7 +261,8 @@ def test_placeholder(
             model_activity = model.fc7
         else:
             raise NotImplementedError(autopsy_model)
-
+    # print('length combined files', len(combined_files))
+    # print('config val batch', config.validation_batch)
     if config.validation_batch > len(combined_files):
         print(
             'Trimming validation_batch size to %s '
@@ -278,10 +297,21 @@ def test_placeholder(
                 first_n_images=first_n_images,
                 n_images=n_images),
             total=num_batches):
-        for im_head in images:
-            feed_dict = {
-                im_head: image_batch
-            }
+        feed_dict = {}
+        _im_0 = np.reshape(image_batch[:, 0, :, :, :], (16, 224, 224, 1))
+        _im_1 = np.reshape(image_batch[:, 1, :, :, :], (16, 224, 224, 1))
+        _im_2 = np.reshape(image_batch[:, 2, :, :, :], (16, 224, 224, 1))
+
+        for jdx, im_head in enumerate(images):
+            # print('im head', im_head.name)
+            #
+            # feed_dict = {
+            #     im_head: _im
+            # }
+            # feed_dict[im_head] = _im
+            feed_dict = {'images_0:0': _im_0,
+                         'images_1:0': _im_1,
+                         'images_2:0': _im_2}
             activity = sess.run(
                 model_activity,
                 feed_dict=feed_dict)
@@ -375,7 +405,7 @@ def test_placeholder(
         # Now work on zscored data
         y = emb.fit_transform(z_score_array)
 
-        # Ouput csv
+        # Output csv
         df = pd.DataFrame(
             np.hstack((
                 y,
@@ -398,10 +428,12 @@ def test_placeholder(
         # Do a classification (sign of the score)
         decisions = np.sign(score_array)
         df = pd.DataFrame(
-            np.hstack(decisions, score_array),
+            np.hstack((decisions.T, score_array.T)),
             columns=['Decisions', 'Scores'])
         df.to_csv(
             os.path.join(
+                out_dir, 'tracking_model_scores.csv'))
+        print('Saved to ', os.path.join(
                 out_dir, 'tracking_model_scores.csv'))
 
 
@@ -411,13 +443,13 @@ if __name__ == '__main__':
         '--image_path',
         type=str,
         dest='image_path',
-        default='/home/drew/tissue/GEDI/combined',  # None,
+        default='/mnt/data/MATCHING/MATCHING_DATA/noBSmAppleSiamese/T1vT7',  # None,
         help='Directory with tiff images.')
     parser.add_argument(
         '--model_file',
         type=str,
         dest='model_file',
-        default='/mnt/data/MATCHING/DrewSiameseModel/model_86000.ckpt',
+        default='/mnt/data/MATCHING/DrewSiameseModel/model_86000.ckpt-86000',
         # None,
         help='Path to the model checkpoint file.')
     parser.add_argument(
@@ -435,8 +467,8 @@ if __name__ == '__main__':
     parser.add_argument(
         '--first_n_images',
         type=int,
-        dest='n_images',
-        default=1,
+        dest='first_n_images',
+        default=3,
         help='Analyze the first n images.')
     parser.add_argument(
         '--autopsy_csv',
@@ -460,7 +492,7 @@ if __name__ == '__main__':
         '--out_dir',
         type=str,
         dest='out_dir',
-        default='autopsy_results',
+        default='/home/jlamstein/Documents/GEDI3-master/autopsy_results',
         help='Output directory.')
     parser.add_argument(
         "--C",
