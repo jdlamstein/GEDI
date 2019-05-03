@@ -1,4 +1,6 @@
 """
+Gets gradient heatmaps of layers of in CNN. Adds them together for visualization. Saves to a folder.
+
 To do:
     save_images - get predictions from algorithm. 
     I think model is predictin 1 for live, 0 for dead. Or it's a data issue. 

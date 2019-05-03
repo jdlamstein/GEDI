@@ -3,7 +3,8 @@
 Compares folders of images for colocalization. Intended for comparing heatmaps of CNN activation layers with original images. Perhaps also the gradients of original
 grayscale images.
 
-
+Get gradient images by running
+visualization > smooth_gradient_image_placeholder_JDL3.py
 Refer to:
 A practical guide to evaluating colocalization in biological microscopy
 Dunn et al.
