@@ -14,6 +14,14 @@ Different Format
 
 
 \\finkbeinernas01.gladstone.internal\data\robodata\JeremyTEMP\GalaxyTEMP\asyntripleA\asyntripleAObjectCropped
+
+Here is a link to a data set that was generated using the old cropping script. This means the images are three-paneled (GFP, masked-GFP, and RGEDI left to right) and track the same neuron over time. On the plus side, this means you can follow neurons over time as they die (though the tracking is sometimes poor). But on the downside, this is not the format we use anymore, so you may need to process them differently. Neurons lower on the plate (ie well rows G and H) are treated with higher levels of Glutamate which kill the neurons more quickly.
+
+\\finkbeinernas01.gladstone.internal\data\robodata\JeremyTEMP\GalaxyTEMP\GEDIhttGlut3b\cache_of_GEDIhttGlutamate3
+
+This is a data set with more standard crops (but no time lapse tracking):
+\\finkbeinernas01.gladstone.internal\data\robodata\JeremyTEMP\GalaxyTEMP\asyntripleA\asyntripleAObjectCropped
+
 '''
 
 import numpy as np
