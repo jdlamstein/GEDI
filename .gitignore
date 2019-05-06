@@ -1,3 +1,4 @@
 *.pyc
 gedi_config.py
 .DS_store
+/.idea/

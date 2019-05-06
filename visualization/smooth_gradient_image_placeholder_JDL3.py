@@ -6,6 +6,7 @@ To do:
     I think model is predictin 1 for live, 0 for dead. Or it's a data issue. 
     test_vgg16_placeholder works, I think it's that dead is 1 and live is 0
 
+Testing out a new branch
 """
 
 
