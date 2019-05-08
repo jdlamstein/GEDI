@@ -7,10 +7,21 @@ To do:
     test_vgg16_placeholder works, I think it's that dead is 1 and live is 0
 
 Testing out a new branch
+
+What happened:
+Appended parent directory so exp_ops.tf_fun loads
+Copied ScientistLiveDead dir to this local branch
+Adjusted default cmd params to point to it
+Adjusted default param from trained weights
+
+Concerns:
+Will not generate ScientistLiveDead/gradient_images; must be manually created
+
 """
 
 
 import os
+import sys
 import time
 import re
 import tensorflow as tf
@@ -18,6 +29,16 @@ import numpy as np
 import imageio
 from argparse import ArgumentParser
 from glob import glob
+import gradient_ops as gops
+import cv2
+
+# fix this so everything imported automatically
+def showMods(): print('\n'.join(sys.path))
+currentdir = os.path.dirname(os.path.realpath(__file__))
+parentdir = os.path.dirname(currentdir)
+sys.path.append(parentdir)
+
+
 from exp_ops.tf_fun import make_dir
 from exp_ops.preprocessing_GEDI_images import produce_patch
 from gedi_config import GEDIconfig
@@ -136,7 +157,7 @@ def save_images(
         print('target_label', target_label)
         f = plt.figure()
         iviz = np.squeeze(iviz)
-        plt.imshow(iviz)
+        #plt.imshow(iviz)
         print(type(files))
         print(type(ifiles))
         print(ifiles.shape)
@@ -155,12 +176,14 @@ def save_images(
         elif not correct and not target_label:
             # FN
             it_folder = folders[1][1]
-        plt.title('Predicted label=%s, true label=%s' % (iyhat, iy))
-        plt.savefig(
-            os.path.join(
-                it_folder,
-                '%s%s' % (it_f, ext)))
-        plt.close(f)
+        # blocking other visualizations for testing purposes
+        #plt.title('Predicted label=%s, true label=%s' % (iyhat, iy))
+        #plt.savefig(
+        #    os.path.join(
+        #        it_folder,
+        #        '%s%s' % (it_f, ext)))
+        print(it_f)
+        #plt.close(f)
 
 #iviz.squeeze()
 def visualization_function(images, viz):
@@ -189,6 +212,7 @@ def crop_center(img, crop_size):
     starty = y // 2 - (cy // 2)
     return img[starty:starty + cy, startx:startx + cx]
 
+# not used
 def crop_and_save(savename,img, crop_size):
     im = crop_center(img, crop_size)
     imageio.imwrite(savename, im)
@@ -507,6 +531,23 @@ def visualize_model(
             y = np.append(y, label_batch)
             file_array = np.append(file_array, file_batch)
             viz_images += [it_grads]
+
+            #gops.plot_save_imgs(it_grads[0], image_batch[0])
+            print(it_grads, np.shape(it_grads))
+            print(image_batch, np.shape(image_batch))
+            #originals = visualization_function(image_batch, viz)
+            #print(originals, np.shape(originals))
+            #gops.plot_save_imgs(it_grads[0, :, :], originals[0, :, :])
+
+            plt.imshow(it_grads[0])
+            plt.show()
+            plt.imshow(image_batch[0])
+            plt.show()
+
+            fig = figure()
+
+
+            input("...")
             
             for _im, file_i in zip(image_batch, file_batch):
                 '''Saves cropped input images for comparison'''
@@ -554,18 +595,18 @@ def visualize_model(
     ckpt_file_array = ckpt_file_array[0]
     ckpt_y = ckpt_y[0]
     ckpt_yhat = ckpt_yhat[0]
-     # Save images
-#    save_images(
-#        y= ckpt_y,
-#        yhat= ckpt_yhat,
-#        viz=ckpt_viz_images,
-#        files=ckpt_file_array,
-#        output_folder=output_folder,
-#        target=1,
-#        label_dict={
-#            'live': 1,
-#            'dead': 0
-#        })
+      #Save images
+    save_images(
+       y= ckpt_y,
+       yhat= ckpt_yhat,
+       viz=ckpt_viz_images,
+       files=ckpt_file_array,
+       output_folder=output_folder,
+       target=1,
+       label_dict={
+           'live': 1,
+           'dead': 0
+       })
 
 
 if __name__ == '__main__':
@@ -574,19 +615,19 @@ if __name__ == '__main__':
         "--live_ims",
         type=str,
         dest="live_ims",
-        default='/mnt/data/ScientistLiveDead/BSLive',
+        default='/Users/joshlamstein/Documents/GEDI3-master/ScientistLiveDead/BSLive',
         help="Directory containing your Live .tiff images.")
     parser.add_argument(
         "--dead_ims",
         type=str,
         dest="dead_ims",
-        default='/mnt/data/Desktop/ScientistLiveDead/BSDead',
+        default='/Users/joshlamstein/Documents/GEDI3-master/ScientistLiveDead/BSDead',
         help="Directory containing your Dead .tiff images.")
     parser.add_argument(
         "--model_file",
         type=str,
         dest="model_file",
-        default = '/home/jlamstein/Documents/pretrained_weights/trained_gedi_model/model_58600.ckpt-58600',
+        default = '/Users/joshlamstein/Documents/pretrained_weights/trained_gedi_model/model_58600.ckpt-58600',
         help="Folder containing your trained CNN's checkpoint files.")
 #        default='/Users/nickjermey/GEDI/models/trained_gedi_model/model_58600.ckpt-58600',
     parser.add_argument(
@@ -621,7 +662,7 @@ if __name__ == '__main__':
         "--output_folder",
         type=str,
         dest="output_folder",
-        default='/mnt/data/ScientistLiveDead/gradient_images',
+        default='/Users/joshlamstein/Documents/GEDI3-master/ScientistLiveDead/gradient_images',
         help='Folder to save the visualizations.')
 
     args = parser.parse_args()
