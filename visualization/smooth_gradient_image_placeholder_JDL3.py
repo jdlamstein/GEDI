@@ -4,24 +4,25 @@ Gets gradient heatmaps of layers of in CNN. Adds them together for visualization
 To do:
     save_images - get predictions from algorithm. 
     I think model is predictin 1 for live, 0 for dead. Or it's a data issue. 
-    test_vgg16_placeholder works, I think it's that dead is 1 and live is 0
+    test_vgg16_placeholder works, I think it's that dead is 1 and live is 0 #fixed
 
 Testing out a new branch
 
 What happened:
-Appended parent directory so exp_ops.tf_fun loads
 Copied ScientistLiveDead dir to this local branch
-Adjusted default cmd params to point to it
 Adjusted default param from trained weights
+Added comb_out_folder to main function
+Added suppress_out to image_batcher so it does not output crops during tests
 
 Concerns:
-Will not generate ScientistLiveDead/gradient_images; must be manually created
+Will not os.mkdir ScientistLiveDead/gradient_images; must be manually created
 
 """
 
 
 import os
 import sys
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import time
 import re
 import tensorflow as tf
@@ -30,15 +31,6 @@ import imageio
 from argparse import ArgumentParser
 from glob import glob
 import gradient_ops as gops
-import cv2
-
-# fix this so everything imported automatically
-def showMods(): print('\n'.join(sys.path))
-currentdir = os.path.dirname(os.path.realpath(__file__))
-parentdir = os.path.dirname(currentdir)
-sys.path.append(parentdir)
-
-
 from exp_ops.tf_fun import make_dir
 from exp_ops.preprocessing_GEDI_images import produce_patch
 from gedi_config import GEDIconfig
@@ -157,7 +149,7 @@ def save_images(
         print('target_label', target_label)
         f = plt.figure()
         iviz = np.squeeze(iviz)
-        #plt.imshow(iviz)
+        plt.imshow(iviz)
         print(type(files))
         print(type(ifiles))
         print(ifiles.shape)
@@ -176,14 +168,13 @@ def save_images(
         elif not correct and not target_label:
             # FN
             it_folder = folders[1][1]
-        # blocking other visualizations for testing purposes
-        #plt.title('Predicted label=%s, true label=%s' % (iyhat, iy))
-        #plt.savefig(
-        #    os.path.join(
-        #        it_folder,
-        #        '%s%s' % (it_f, ext)))
+        plt.title('Predicted label=%s, true label=%s' % (iyhat, iy))
+        plt.savefig(
+            os.path.join(
+                it_folder,
+                '%s%s' % (it_f, ext)))
         print(it_f)
-        #plt.close(f)
+        plt.close(f)
 
 #iviz.squeeze()
 def visualization_function(images, viz):
@@ -231,10 +222,11 @@ def image_batcher(
         training_max,
         training_min,
         num_channels=3,
-        per_timepoint=False):
+        per_timepoint=False,
+        suppress_out=False):
     """Placeholder image/label batch loader."""
     for b in range(num_batches):
-        next_image_batch = images[start:start + config.validation_batch]
+        next_image_batch = images[start:start + config.validation_batch] # probably overindexed
         image_stack, output_files = [], []
         label_stack = labels[start:start + config.validation_batch]
         
@@ -266,7 +258,7 @@ def image_batcher(
                     # 5. Clip to [0, 1] just in case
                     patch[patch > 1.] = 1.
                     patch[patch < 0.] = 0.
-                    imageio.imwrite(os.path.join(output_folder, 'cropped', ) , patch)
+                    if not suppress_out: imageio.imwrite(os.path.join(output_folder, 'cropped', ), patch)
                     # 6. Add to list
                     image_stack += [patch[None, :, :, :]]
                     output_files += ['f_%s' % channel]
@@ -323,7 +315,8 @@ def visualize_model(
         smooth_iterations=50,
         untargeted=False,
         viz='none',
-        per_timepoint=True):
+        per_timepoint=True,
+        comb_out_folder=None):
     """Train an SVM for your dataset on GEDI-model encodings."""
     config = GEDIconfig()
     if live_ims is None:
@@ -339,11 +332,8 @@ def visualize_model(
     live_files = glob(os.path.join(live_ims, '*%s' % config.raw_im_ext))
     dead_files = glob(os.path.join(dead_ims, '*%s' % config.raw_im_ext))
     combined_labels = np.concatenate((
-        np.ones(len(live_files)),
-        np.zeros(len(dead_files))))
-#    combined_labels = np.concatenate((
-#        np.zeros(len(live_files)),
-#        np.ones(len(dead_files))))
+        np.ones(len(live_files)),   # files processed in order
+        np.zeros(len(dead_files)))) # live first, then dead
     combined_files = np.concatenate((live_files, dead_files))
     if len(combined_files) == 0:
         raise RuntimeError('Could not find any files. Check your image path.')
@@ -455,7 +445,7 @@ def visualize_model(
             sc, tyh = sess.run(
                 [scores, preds],
                 feed_dict=feed_dict)
-            for idx in range(smooth_iterations):
+            for _ in range(smooth_iterations):
                 feed_dict = {
                     images: add_noise(image_batch),
                     labels: label_batch
@@ -485,14 +475,14 @@ def visualize_model(
                     output_folder,
                     file_i.split(os.path.sep)[-1])
                 out_pointer = out_pointer.split('.')[0] + '.tif'
-#                f = plt.figure()
+                f = plt.figure()
 
                 
                 imageio.imwrite(out_pointer, grad_i)
-#                plt.imshow(grad_i)
-#                plt.title('Pred=%s, label=%s' % (pred_i, label_batch))
-#                plt.savefig(out_pointer)
-#                plt.close(f)
+                plt.imshow(grad_i)
+                plt.title('Pred=%s, label=%s' % (pred_i, label_i))
+                plt.savefig(out_pointer)
+                plt.close(f)
 
             # Plot a moisaic of the grads
             if viz == 'none':
@@ -531,23 +521,6 @@ def visualize_model(
             y = np.append(y, label_batch)
             file_array = np.append(file_array, file_batch)
             viz_images += [it_grads]
-
-            #gops.plot_save_imgs(it_grads[0], image_batch[0])
-            print(it_grads, np.shape(it_grads))
-            print(image_batch, np.shape(image_batch))
-            #originals = visualization_function(image_batch, viz)
-            #print(originals, np.shape(originals))
-            #gops.plot_save_imgs(it_grads[0, :, :], originals[0, :, :])
-
-            plt.imshow(it_grads[0])
-            plt.show()
-            plt.imshow(image_batch[0])
-            plt.show()
-
-            fig = figure()
-
-
-            input("...")
             
             for _im, file_i in zip(image_batch, file_batch):
                 '''Saves cropped input images for comparison'''
@@ -568,8 +541,17 @@ def visualize_model(
                     file_i.split(os.path.sep)[-1])
                 out_pointer = out_pointer.split('.')[0] + '.tif'
                 imageio.imwrite(out_pointer, _im)
-                
-                
+
+            # New code
+            #  uses image_batch, it_grads, y, yhat vars (which have corresponding indices)
+            #  generates side-by-side visualizations with original and its gradient
+            if not comb_out_folder is None:
+                if not os.path.exists(comb_out_folder):
+                        os.makedirs(comb_out_folder)
+                for i, (img, grad, pred, actual) in enumerate(zip(image_batch, it_grads, yhat, y)):
+                    # saves image into specified folder, titled '{batch}_{num}.png'
+                    gops.plot_save_imgs(img, grad, os.path.join(comb_out_folder, str(idx) + '_' + str(i) + '.png'), pred, actual)
+
         ckpt_yhat.append(yhat)
         ckpt_y.append(y)
         ckpt_scores.append(dec_scores)
@@ -578,6 +560,7 @@ def visualize_model(
         print ('Batch %d took %.1f seconds' % (idx, time.time() - start_time))
     sess.close()
     ckpt_viz_images = np.squeeze(ckpt_viz_images)
+
     # Save everything
     np.savez(
         os.path.join(out_dir, 'validation_accuracies'),
@@ -615,13 +598,17 @@ if __name__ == '__main__':
         "--live_ims",
         type=str,
         dest="live_ims",
-        default='/Users/joshlamstein/Documents/GEDI3-master/ScientistLiveDead/BSLive',
+        default=
+        '/Users/joshlamstein/Documents/GEDI3-master/tests/livetest',
+        #'/Users/joshlamstein/Documents/GEDI3-master/ScientistLiveDead/BSLive',
         help="Directory containing your Live .tiff images.")
     parser.add_argument(
         "--dead_ims",
         type=str,
         dest="dead_ims",
-        default='/Users/joshlamstein/Documents/GEDI3-master/ScientistLiveDead/BSDead',
+        default=
+        '/Users/joshlamstein/Documents/GEDI3-master/tests/deadtest',
+        #'/Users/joshlamstein/Documents/GEDI3-master/ScientistLiveDead/BSDead',
         help="Directory containing your Dead .tiff images.")
     parser.add_argument(
         "--model_file",
@@ -664,6 +651,13 @@ if __name__ == '__main__':
         dest="output_folder",
         default='/Users/joshlamstein/Documents/GEDI3-master/ScientistLiveDead/gradient_images',
         help='Folder to save the visualizations.')
+    parser.add_argument(
+       "--combined_out_folder",
+       type=str,
+       dest="comb_out_folder",
+       default='/Users/joshlamstein/Documents/GEDI3-master/tests/imgs2/',
+       help='Folder for side-by-side originals and visualizations'
+    )
 
     args = parser.parse_args()
     visualize_model(**vars(args))

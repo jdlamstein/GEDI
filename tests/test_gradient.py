@@ -1,7 +1,13 @@
 import tensorflow as tf
+
+import os
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+
 import visualization.smooth_gradient_image_placeholder_JDL3 as grad
 import numpy as np
 import numpy.random as npr
+from gedi_config import GEDIconfig
 
 
 def test_multiply():
@@ -35,10 +41,10 @@ def make_img():
 
 def test_crop_center():
     global img_dim
-    
+
     img = make_img()
     crop_size = (npr.randint(0, img_dim[0]), npr.randint(0, img_dim[1]))
-    
+
     cropped = grad.crop_center(img, crop_size)
     sh = np.shape(cropped)
 
@@ -54,3 +60,34 @@ def test_renormalize():
 
     assert max(flat) <= 1
     assert min(flat) >= 0
+
+
+
+def test_batcher():
+    live_fold = ['/Users/joshlamstein/Documents/GEDI3-master/ScientistLiveDead/BSLive/cache_GEDIhttGlutamate4_C4_9_FITC-DFTrCy5_RFP-DFTrCy5-1.tif']
+    dead_fold = ['/Users/joshlamstein/Documents/GEDI3-master/ScientistLiveDead/BSDead/cache_GEDIhttGlutamate4_C4_9_FITC-DFTrCy5_RFP-DFTrCy5-2.tif']
+
+    num_batches = 1 # can try wth multiple but must be compatible with gedi_config or will throw error
+    train_min = 0 # unknown usage so far
+    train_max = 1 # ditto
+    c = GEDIconfig()
+
+    lbls = np.concatenate((np.ones(len(live_fold)), np.zeros(len(dead_fold))))
+
+    batcher = grad.image_batcher(0, num_batches, live_fold + dead_fold, lbls, c, train_max, train_min, 1, True, True)
+
+    i = 0
+    for batch in batcher:
+        imgs, _, _ = batch
+        dims = np.shape(imgs)
+
+
+        i += 1
+    assert i == 1, 'Too many batches created'
+
+test_batcher()
+"""for i, batch in enumerate(test_batcher()):
+    print(i)
+    print(batch)
+
+"""
