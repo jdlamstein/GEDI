@@ -62,8 +62,9 @@ def test_renormalize():
     assert min(flat) >= 0
 
 
-
 def test_batcher():
+    """Behavior: tests ability of batcher on handling one batch of images, returning numpy, among """
+
     live_fold = ['/Users/joshlamstein/Documents/GEDI3-master/ScientistLiveDead/BSLive/cache_GEDIhttGlutamate4_C4_9_FITC-DFTrCy5_RFP-DFTrCy5-1.tif']
     dead_fold = ['/Users/joshlamstein/Documents/GEDI3-master/ScientistLiveDead/BSDead/cache_GEDIhttGlutamate4_C4_9_FITC-DFTrCy5_RFP-DFTrCy5-2.tif']
 
@@ -74,20 +75,15 @@ def test_batcher():
 
     lbls = np.concatenate((np.ones(len(live_fold)), np.zeros(len(dead_fold))))
 
-    batcher = grad.image_batcher(0, num_batches, live_fold + dead_fold, lbls, c, train_max, train_min, 1, True, True)
+    batcher = grad.image_batcher(0, num_batches, live_fold + dead_fold, lbls, c, train_max, train_min, 1, True, True) # last arg added: suppress file io
 
-    i = 0
-    for batch in batcher:
-        imgs, _, _ = batch
-        dims = np.shape(imgs)
+    for i, batch in enumerate(batcher):
+        assert np.shape(batch[0])[0] == len(batch[1]) # there is a label for every image
+        assert np.shape(batch[0])[1:] == (224, 224, 3) # image dimensions correct/uniform
+        assert np.amax(batch[0]) <= train_max
+        assert np.amin(batch[0]) >= train_min
 
+    # right num of batches produced?
+    # may fail if config batch numbers too high
+    assert i == num_batches - 1
 
-        i += 1
-    assert i == 1, 'Too many batches created'
-
-test_batcher()
-"""for i, batch in enumerate(test_batcher()):
-    print(i)
-    print(batch)
-
-"""

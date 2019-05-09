@@ -258,7 +258,10 @@ def image_batcher(
                     # 5. Clip to [0, 1] just in case
                     patch[patch > 1.] = 1.
                     patch[patch < 0.] = 0.
+
+                    # added to prevent file buildup/rewriting during testing
                     if not suppress_out: imageio.imwrite(os.path.join(output_folder, 'cropped', ), patch)
+
                     # 6. Add to list
                     image_stack += [patch[None, :, :, :]]
                     output_files += ['f_%s' % channel]
