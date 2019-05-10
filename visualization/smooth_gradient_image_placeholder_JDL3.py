@@ -147,9 +147,9 @@ def save_images(
         print('correct', correct)
 
         print('target_label', target_label)
-        f = plt.figure()
+        #f = plt.figure()
         iviz = np.squeeze(iviz)
-        plt.imshow(iviz)
+        #plt.imshow(iviz)
         print(type(files))
         print(type(ifiles))
         print(ifiles.shape)
@@ -159,22 +159,31 @@ def save_images(
         if correct and target_label:
             # TP
             it_folder = folders[0][0]
+            #print(it_folder, 'tp')
         elif correct and not target_label:
             # TN
-            it_folder = folders[0][1]
+            it_folder = folders[1][0]
+            #print(it_folder, 'tn')
         elif not correct and target_label:
             # FP
-            it_folder = folders[1][0]
+            it_folder = folders[0][1]
+            #print(it_folder, 'fp')
         elif not correct and not target_label:
             # FN
             it_folder = folders[1][1]
-        plt.title('Predicted label=%s, true label=%s' % (iyhat, iy))
+            #print(it_folder, 'fn')
+
+        # saves plots in correct label & accuracy folder
+        '''plt.title('Predicted label=%s, true label=%s' % (iyhat, iy))
         plt.savefig(
             os.path.join(
                 it_folder,
                 '%s%s' % (it_f, ext)))
         print(it_f)
-        plt.close(f)
+        plt.close(f)'''
+        # changed to write exact gradient into labelled folders
+        imageio.imwrite(os.path.join(it_folder, it_f), iviz)
+
 
 #iviz.squeeze()
 def visualization_function(images, viz):
@@ -478,10 +487,11 @@ def visualize_model(
                     output_folder,
                     file_i.split(os.path.sep)[-1])
                 out_pointer = out_pointer.split('.')[0] + '.tif'
-                f = plt.figure()
 
-                
-                imageio.imwrite(out_pointer, grad_i)
+                # writes gradient plots right into output folder
+                f = plt.figure()
+                # was double writing in diff. formats
+                #imageio.imwrite(out_pointer, grad_i)
                 plt.imshow(grad_i)
                 plt.title('Pred=%s, label=%s' % (pred_i, label_i))
                 plt.savefig(out_pointer)
@@ -524,8 +534,16 @@ def visualize_model(
             y = np.append(y, label_batch)
             file_array = np.append(file_array, file_batch)
             viz_images += [it_grads]
+
+            # make folders for cropped images
+            crop_folder = os.path.join(output_folder, 'cropped')
+            live_folder = os.path.join(crop_folder, 'live')
+            dead_folder = os.path.join(crop_folder, 'dead')
+            for folder in (live_folder, dead_folder):
+                if not os.path.exists(folder):
+                    os.makedirs(folder)
             
-            for _im, file_i in zip(image_batch, file_batch):
+            for _im, file_i, lbl in zip(image_batch, file_batch, y):
                 '''Saves cropped input images for comparison'''
 #                print(np.unique(_im))
                 print('shape', np.shape(_im))
@@ -536,15 +554,20 @@ def visualize_model(
                 print(_im.dtype)
                 print('max _im', np.max(_im))
                 print('min _im', np.min(_im))
-                crop_folder = os.path.join(output_folder, 'cropped')
+                """crop_folder = os.path.join(output_folder, 'cropped') # doesn't need to be in loop
                 if not os.path.exists(crop_folder):
-                    os.makedirs(crop_folder)
+                    os.makedirs(crop_folder)"""
+
+                # saves cropped images to correct part of output/cropped folder
+
                 out_pointer = os.path.join(
-                    crop_folder,
+                    live_folder if lbl == 1. else dead_folder,
                     file_i.split(os.path.sep)[-1])
                 out_pointer = out_pointer.split('.')[0] + '.tif'
                 imageio.imwrite(out_pointer, _im)
 
+
+            # saves side-by-side crop and grad to specified folder
             # New code
             #  uses image_batch, it_grads, y, yhat vars (which have corresponding indices)
             #  generates side-by-side visualizations with original and its gradient

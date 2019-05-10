@@ -20,6 +20,7 @@ Here is a link to a data set that was generated using the old cropping script. T
 
 \\finkbeinernas01.gladstone.internal\data\robodata\JeremyTEMP\GalaxyTEMP\GEDIhttGlut3b\cache_of_GEDIhttGlutamate3
 
+
 This is a data set with more standard crops (but no time lapse tracking):
 \\finkbeinernas01.gladstone.internal\data\robodata\JeremyTEMP\GalaxyTEMP\asyntripleA\asyntripleAObjectCropped
 
@@ -31,15 +32,16 @@ import imageio
 import glob
 import os
 from skimage import color
+import matplotlib.pyplot as plt
 
-savefile = '/mnt/data/ScientistLiveDead/gradient_images/colocalization.csv'
+savefile = '/Users/joshlamstein/Documents/GEDI3-master/ScientistLiveDead/gradient_images/colocalization.csv'
 
-orig_live_dir = '/mnt/data/ScientistLiveDead/gradient_images/cropped/Live'
-orig_dead_dir = '/mnt/data/ScientistLiveDead/gradient_images/cropped/Dead'
-grad_live_dir = '/mnt/data/ScientistLiveDead/gradient_images/heatmaps/Live'
-grad_dead_dir = '/mnt/data/ScientistLiveDead/gradient_images/heatmaps/Dead'
+orig_live_dir = '/Users/joshlamstein/Documents/GEDI3-master/ScientistLiveDead/gradient_images/cropped/live'
+orig_dead_dir = '/Users/joshlamstein/Documents/GEDI3-master/ScientistLiveDead/gradient_images/cropped/dead'
+grad_live_dir = '/Users/joshlamstein/Documents/GEDI3-master/ScientistLiveDead/gradient_images/live_true'
+grad_dead_dir = '/Users/joshlamstein/Documents/GEDI3-master/ScientistLiveDead/gradient_images/dead_true'
 
-asyn_dir = '/mnt/finkbeinerlab/data/robodata/JeremyTEMP/GalaxyTEMP/asyntripleA/asyntripleAObjectCropped'
+# asyn_dir = '/mnt/finkbeinerlab/data/robodata/JeremyTEMP/GalaxyTEMP/asyntripleA/asyntripleAObjectCropped' # unused
 
 orig_live = glob.glob(os.path.join(orig_live_dir, '*.tif'))
 heats_live = glob.glob(os.path.join(grad_live_dir, '*.tif'))
@@ -47,14 +49,16 @@ heats_live = glob.glob(os.path.join(grad_live_dir, '*.tif'))
 orig_dead = glob.glob(os.path.join(orig_dead_dir, '*.tif'))
 heats_dead = glob.glob(os.path.join(grad_dead_dir, '*.tif'))
 
-live_labels = [1 for _ in orig_live]
-dead_labels = [0 for _ in orig_dead]
+live_labels = [1] * len(orig_live)
+dead_labels = [0] * len(orig_dead)
 
-labels = live_labels + dead_labels
+# preserve parallel orderings
+labels = dead_labels + live_labels
 orig = orig_dead + orig_live
 heats = heats_dead + heats_live
 
 
+# unused method
 def normalize(im, switchy):
     if switchy == 'grad':
         nim = im / np.max(im)
@@ -88,7 +92,7 @@ def moc(orig, heat):
 # def mcc(orig, heat):
 #     '''Manders correlation coefficient, fractional overlap, to do.'''
 #
-results = []
+"""results = []
 
 for orig_file, heat_file, lbl in zip(orig, heats, labels):
     im = imageio.imread(orig_file)
@@ -105,3 +109,21 @@ print(results)
 colocalization = pd.DataFrame(results, columns=['label', 'PCC', 'MOC'])
 
 colocalization.to_csv(savefile, index=False)
+"""
+
+results = []
+
+for orig_file, heat_file, lbl in zip(orig, heats, labels):
+    im = imageio.imread(orig_file)
+    im = color.rgb2gray(im)
+    grad = imageio.imread(heat_file)
+
+    im = im / np.max(im)
+    grad = grad / np.max(grad)
+
+    print(list(map(lambda x: np.shape(x), (im, grad)))) # should all be 24s
+
+    plt.imshow(im)
+    plt.show()
+    plt.imshow(grad)
+    plt.show()
