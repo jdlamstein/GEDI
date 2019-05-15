@@ -126,44 +126,26 @@ colocalization = pd.DataFrame(results, columns=['label', 'PCC', 'MOC'])
 colocalization.to_csv(savefile, index=False)
 """
 
-for orig_file, heat_file, lbl in list(zip(orig, heats, labels))[0:1]:  # only want to test several
+for orig_file, heat_file, lbl in list(zip(orig, heats, labels))[10:11]:  # only want to test several
     im, grad = imgPair(orig_file, heat_file)
+    im *= 255
+    im = im.astype(int)
+    grad *= 255
+    grad = grad.astype(int)
     im_flat, grad_flat = map(st.flatten_np, (im, grad))
 
     assert np.shape(im) == np.shape(grad)  # same shape so we can use either for iterating counter
-    sh = np.shape(im)
 
-    # grab regression line coefficients
-    m, b = st.odr_linear(im_flat, grad_flat, plot=False)
-    print(m, b)
-
-    print(st.pcc(im_flat, grad_flat))
-
-    lin = lambda x: m * x + b
-    pairs_lt = lambda i, g, t: [pair for pair in zip(i, g) if pair[0] < t and pair[1] < lin(t)]
-    pairs_gt = lambda i, g, t: [pair for pair in zip(i, g) if pair[0] >= t or pair[1] >= lin(t)]
-
-    t = .01
-
-    _im_flat, _grad_flat = zip(*pairs_lt(im_flat, grad_flat, t))
+    t = st.threshold(im_flat, grad_flat)
+    th = 5
+    _im_flat, _grad_flat = t.points_below(th)
     print(st.pcc(_im_flat, _grad_flat), len(_im_flat))
-    _im_flat, _grad_flat = zip(*pairs_gt(im_flat, grad_flat, t))
+    _im_flat, _grad_flat = t.points_above(th)
     print(st.pcc(_im_flat, _grad_flat), len(_im_flat))
 
-    thresh_img = [[1 if im[i][j] > t else 0 for j in range(sh[1])] for i in range(sh[0])]
-    thresh_grad = [[1 if grad[i][j] > lin(t) else 0 for j in range(sh[1])] for i in range(sh[0])]
-    thresh_overlay = [[1 if im[i][j] > t and grad[i][j] > lin(t) else 0 for j in range(sh[1])] for i in range(sh[0])]
-
+    im = [[im[i][j] if im[i][j] > 9 else 0 for j in range(224)] for i in range(224)]
     plt.imshow(im)
-    plt.show()
-    plt.imshow(thresh_img)
-    plt.show()
-    plt.imshow(grad)
-    plt.show()
-    plt.imshow(thresh_grad)
-    plt.show()
-    plt.imshow(thresh_overlay)
-    plt.show()
+    #plt.show()
 
 
     '''blue = lambda i, j: min((im[i][j], grad[i][j])) # what is  smallest intensity @ pixel? i.e. only positive if both channels positive
@@ -179,8 +161,3 @@ for orig_file, heat_file, lbl in list(zip(orig, heats, labels))[0:1]:  # only wa
     selected = np.array([[[1] * 3 if blue(i, j) > 0.05 else [im[i][j], grad[i][j], 0] for j in range(sh[1])] for i in range(sh[0])])
 
     dispImg(selected)'''
-
-    # plt.imshow(im)
-    # plt.show()
-    # plt.imshow(grad)
-    # plt.show()

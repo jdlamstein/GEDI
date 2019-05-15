@@ -624,7 +624,8 @@ if __name__ == '__main__':
         dest="live_ims",
         default=
         #'/Users/joshlamstein/Documents/GEDI3-master/tests/livetest',
-        '/Users/joshlamstein/Documents/GEDI3-master/ScientistLiveDead/BSLive',
+        #'/Users/joshlamstein/Documents/GEDI3-master/ScientistLiveDead/BSLive',
+        '/Volumes/data/robodata/Gennadi/live_crop_test',
         help="Directory containing your Live .tiff images.")
     parser.add_argument(
         "--dead_ims",
@@ -632,7 +633,8 @@ if __name__ == '__main__':
         dest="dead_ims",
         default=
         #'/Users/joshlamstein/Documents/GEDI3-master/tests/deadtest',
-        '/Users/joshlamstein/Documents/GEDI3-master/ScientistLiveDead/BSDead',
+        #'/Users/joshlamstein/Documents/GEDI3-master/ScientistLiveDead/BSDead',
+        '/Volumes/data/robodata/Gennadi/dead_crop_test',
         help="Directory containing your Dead .tiff images.")
     parser.add_argument(
         "--model_file",
@@ -673,13 +675,13 @@ if __name__ == '__main__':
         "--output_folder",
         type=str,
         dest="output_folder",
-        default='/Users/joshlamstein/Documents/GEDI3-master/ScientistLiveDead/gradient_images',
+        default='/Volumes/data/robodata/Gennadi/gradient_images/',
         help='Folder to save the visualizations.')
     parser.add_argument(
        "--combined_out_folder",
        type=str,
        dest="comb_out_folder",
-       default='/Users/joshlamstein/Documents/GEDI3-master/tests/imgs/',
+       default='/Volumes/data/robodata/Gennadi/gradient_images/combined/',
        help='Folder for side-by-side originals and visualizations'
     )
 
