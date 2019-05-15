@@ -33,6 +33,7 @@ import glob
 import os
 from skimage import color
 import matplotlib.pyplot as plt
+import stats as st
 
 savefile = '/Users/joshlamstein/Documents/GEDI3-master/ScientistLiveDead/gradient_images/colocalization.csv'
 
@@ -59,14 +60,28 @@ heats = heats_dead + heats_live
 
 
 # unused method
-def normalize(im, switchy):
+'''def normalize(im, switchy):
     if switchy == 'grad':
         nim = im / np.max(im)
     elif switchy == 'orig':
         nim = im / 255
-    return nim
+    return nim'''
 
+def imgPair(orig_file, heat_file):
+    im = imageio.imread(orig_file)
+    im = color.rgb2gray(im)
+    grad = imageio.imread(heat_file)
 
+    im = im / np.max(im)
+    grad = grad / np.max(grad)
+
+    return im, grad
+
+def dispImg(img):
+    plt.imshow(img)
+    plt.show()
+
+# seems to give very low values, possibly denom. calculation off
 def pcc(orig, heat):
     '''Pearson correlation coefficient'''
     if np.shape(orig)[-1] == 3:
@@ -111,19 +126,61 @@ colocalization = pd.DataFrame(results, columns=['label', 'PCC', 'MOC'])
 colocalization.to_csv(savefile, index=False)
 """
 
-results = []
+for orig_file, heat_file, lbl in list(zip(orig, heats, labels))[0:1]:  # only want to test several
+    im, grad = imgPair(orig_file, heat_file)
+    im_flat, grad_flat = map(st.flatten_np, (im, grad))
 
-for orig_file, heat_file, lbl in zip(orig, heats, labels):
-    im = imageio.imread(orig_file)
-    im = color.rgb2gray(im)
-    grad = imageio.imread(heat_file)
+    assert np.shape(im) == np.shape(grad)  # same shape so we can use either for iterating counter
+    sh = np.shape(im)
 
-    im = im / np.max(im)
-    grad = grad / np.max(grad)
+    # grab regression line coefficients
+    m, b = st.odr_linear(im_flat, grad_flat, plot=False)
+    print(m, b)
 
-    print(list(map(lambda x: np.shape(x), (im, grad)))) # should all be 24s
+    print(st.pcc(im_flat, grad_flat))
+
+    lin = lambda x: m * x + b
+    pairs_lt = lambda i, g, t: [pair for pair in zip(i, g) if pair[0] < t and pair[1] < lin(t)]
+    pairs_gt = lambda i, g, t: [pair for pair in zip(i, g) if pair[0] >= t or pair[1] >= lin(t)]
+
+    t = .01
+
+    _im_flat, _grad_flat = zip(*pairs_lt(im_flat, grad_flat, t))
+    print(st.pcc(_im_flat, _grad_flat), len(_im_flat))
+    _im_flat, _grad_flat = zip(*pairs_gt(im_flat, grad_flat, t))
+    print(st.pcc(_im_flat, _grad_flat), len(_im_flat))
+
+    thresh_img = [[1 if im[i][j] > t else 0 for j in range(sh[1])] for i in range(sh[0])]
+    thresh_grad = [[1 if grad[i][j] > lin(t) else 0 for j in range(sh[1])] for i in range(sh[0])]
+    thresh_overlay = [[1 if im[i][j] > t and grad[i][j] > lin(t) else 0 for j in range(sh[1])] for i in range(sh[0])]
 
     plt.imshow(im)
     plt.show()
+    plt.imshow(thresh_img)
+    plt.show()
     plt.imshow(grad)
     plt.show()
+    plt.imshow(thresh_grad)
+    plt.show()
+    plt.imshow(thresh_overlay)
+    plt.show()
+
+
+    '''blue = lambda i, j: min((im[i][j], grad[i][j])) # what is  smallest intensity @ pixel? i.e. only positive if both channels positive
+    overlay = np.array([[[im[i][j], grad[i][j], blue(i, j)] for j in range(sh[1])] for i in range(sh[0])])
+    overlay[:, :, 2] /= np.amax(overlay[:, :, 2])
+
+    dispImg(overlay)
+
+    overlay[:, :, :2] = np.zeros(np.shape(overlay[:, :, :2]))
+
+    dispImg(overlay)
+
+    selected = np.array([[[1] * 3 if blue(i, j) > 0.05 else [im[i][j], grad[i][j], 0] for j in range(sh[1])] for i in range(sh[0])])
+
+    dispImg(selected)'''
+
+    # plt.imshow(im)
+    # plt.show()
+    # plt.imshow(grad)
+    # plt.show()

@@ -14,8 +14,6 @@ Adjusted default param from trained weights
 Added comb_out_folder to main function
 Added suppress_out to image_batcher so it does not output crops during tests
 
-Concerns:
-Will not os.mkdir ScientistLiveDead/gradient_images; must be manually created
 
 """
 
@@ -625,16 +623,16 @@ if __name__ == '__main__':
         type=str,
         dest="live_ims",
         default=
-        '/Users/joshlamstein/Documents/GEDI3-master/tests/livetest',
-        #'/Users/joshlamstein/Documents/GEDI3-master/ScientistLiveDead/BSLive',
+        #'/Users/joshlamstein/Documents/GEDI3-master/tests/livetest',
+        '/Users/joshlamstein/Documents/GEDI3-master/ScientistLiveDead/BSLive',
         help="Directory containing your Live .tiff images.")
     parser.add_argument(
         "--dead_ims",
         type=str,
         dest="dead_ims",
         default=
-        '/Users/joshlamstein/Documents/GEDI3-master/tests/deadtest',
-        #'/Users/joshlamstein/Documents/GEDI3-master/ScientistLiveDead/BSDead',
+        #'/Users/joshlamstein/Documents/GEDI3-master/tests/deadtest',
+        '/Users/joshlamstein/Documents/GEDI3-master/ScientistLiveDead/BSDead',
         help="Directory containing your Dead .tiff images.")
     parser.add_argument(
         "--model_file",
@@ -681,7 +679,7 @@ if __name__ == '__main__':
        "--combined_out_folder",
        type=str,
        dest="comb_out_folder",
-       default='/Users/joshlamstein/Documents/GEDI3-master/tests/imgs2/',
+       default='/Users/joshlamstein/Documents/GEDI3-master/tests/imgs/',
        help='Folder for side-by-side originals and visualizations'
     )
 
