@@ -13,10 +13,10 @@ To do:
 
 """
 
-master_dir = '/Volumes/data/robodata/Gennadi/gradient_images'
+master_dir = '/Volumes/data/robodata/Gennadi/back_sub/grads'
 o_dir = 'cropped/dead'
 g_dir = 'dead_true'
-out_file = '/Volumes/data/robodata/Gennadi/gradient_images/dead_true.tif'
+out_file = '/Volumes/data/robodata/Gennadi/back_sub/test.tif'
 
 thresh = 0.1
 
@@ -36,13 +36,15 @@ def img_to_channel(file, channel):
     return colored
 
 
-def make_overlay(orig, grad, thresh):
+def make_overlay(orig, o_idx, grad, g_idx, thresh):
     assert orig.shape == grad.shape == (224, 224, 3)
 
     overlay = orig + grad
     for i, row in enumerate(overlay):
         for j, cell in enumerate(row):
-            if min(cell[:2]) >= thresh: overlay[i][j] = [1] * 3
+            # if cell[o_idx] > thresh: overlay[i][j][o_idx] = 1
+            # if cell[g_idx] > 0: overlay[i][j][g_idx] = 1
+            if cell[o_idx] > thresh and cell[g_idx] > 0: overlay[i][j] = [1] * 3
 
     return overlay
 
@@ -54,9 +56,9 @@ def make_triple(file, master_dir, o_dir, g_dir, thresh):
     orig_fn = os.path.join(orig_dir, file)
     grad_fn = os.path.join(grad_dir, file)
 
-    orig_img = img_to_channel(orig_fn, 0)
-    grad_img = img_to_channel(grad_fn, 1)
-    overlay = make_overlay(orig_img, grad_img, thresh)
+    orig_img = img_to_channel(orig_fn, 1)
+    grad_img = img_to_channel(grad_fn, 0)
+    overlay = make_overlay(orig_img, 0, grad_img, 1, thresh)
 
     trip = np.hstack((orig_img, grad_img, overlay))
     return trip
@@ -82,6 +84,9 @@ def make_table(row_size, *args):
 def combine_cells(table):
     rows = []
     for row in table:
+        for i, cell in enumerate(row[:-1]):
+            row[i] = np.hstack((cell, np.ones((224, 10, 3))))
+
         rows.append(np.hstack(tuple(row)))
 
     return rows
@@ -89,13 +94,18 @@ def combine_cells(table):
 
 def combine_all(table):
     rows = combine_cells(table)
+    for i, row in enumerate(rows[:-1]):
+        rows[i] = np.vstack((row, np.ones((10, np.shape(row)[1], 3))))
+
     return np.vstack(tuple(rows))
 
 
 def img_from_fold(num_imgs, row_size, out_file, *args):
     master_dir, o_dir, g_dir, thresh = args
 
-    files = [file.split('/')[-1] for file in glob(os.path.join(master_dir, g_dir, '*.tif'))[:num_imgs]]
+    files = [file.split('/')[-1] for file in glob(os.path.join(master_dir, g_dir, '*.tif'))]
+    np.random.shuffle(files)
+    files = files[:num_imgs]
 
     table = make_table(row_size, files, *args)
     img = combine_all(table)
@@ -106,4 +116,4 @@ def img_from_fold(num_imgs, row_size, out_file, *args):
     imageio.imwrite(out_file, img)
 
 
-img_from_fold(24, 4, out_file, master_dir, o_dir, g_dir, thresh)
+img_from_fold(18, 3, out_file, master_dir, o_dir, g_dir, thresh)

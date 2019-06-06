@@ -103,7 +103,7 @@ def plot_save_imgs(original, gradient, fName=None, pred=None, actual=None):
 
     """
 
-    f = plt.figure()
+    # f = plt.figure()
 
     plt.imshow(concat_imgs(*normalize_imgs(rgb_to_gray(original), gradient)))
 

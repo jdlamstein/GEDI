@@ -20,7 +20,10 @@ Added suppress_out to image_batcher so it does not output crops during tests
 
 import os
 import sys
+
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+os.environ['KMP_DUPLICATE_LIB_OK']='True'
+
 import time
 import re
 import tensorflow as tf
@@ -36,6 +39,7 @@ from models import baseline_vgg16 as vgg16
 from matplotlib import pyplot as plt
 from matplotlib import gridspec
 from matplotlib.colors import Normalize
+from random import shuffle
 from tqdm import tqdm
 from skimage import exposure
 
@@ -107,7 +111,7 @@ def alpha_mosaic(
         if colorbar and idx == len(maps) - 1:
             plt.colorbar(cf)
     plt.savefig(output)
-    plt.show()
+    # plt.show()
     plt.close(f)
 
 
@@ -341,6 +345,12 @@ def visualize_model(
 
     live_files = glob(os.path.join(live_ims, '*%s' % config.raw_im_ext))
     dead_files = glob(os.path.join(dead_ims, '*%s' % config.raw_im_ext))
+
+    shuffle(live_files)
+    shuffle(dead_files)
+    live_files = live_files[:1]
+    dead_files = dead_files[:1]
+
     combined_labels = np.concatenate((
         np.ones(len(live_files)),   # files processed in order
         np.zeros(len(dead_files)))) # live first, then dead
@@ -397,12 +407,12 @@ def visualize_model(
         scores = vgg.fc7
         preds = tf.argmax(vgg.prob, 1)
         activity_pattern = vgg.fc8
-        print(activity_pattern.get_shape())
+        print('activity pattern', activity_pattern.get_shape())
         if not untargeted:
             oh_labels = tf.one_hot(labels, config.output_shape)
             print(oh_labels.get_shape())
             activity_pattern *= oh_labels
-        grad_image = tf.gradients(activity_pattern, images)
+        grad_image = tf.gradients(activity_pattern, images)  # Takes gradient of image
 
     # Set up saver
     saver = tf.train.Saver(tf.global_variables())
@@ -463,12 +473,18 @@ def visualize_model(
                 it_grad = sess.run(
                     grad_image,
                     feed_dict=feed_dict)
-                it_grads += it_grad[0]
+                it_grads += it_grad[0]  # Z projection
             print('it grad shape', np.shape(it_grad))
 
             it_grads /= smooth_iterations  # Mean across iterations
             it_grads = visualization_function(it_grads, viz)
             print('it grads shape', np.shape(it_grads))
+
+            for i, grad in enumerate(it_grads):
+                os.makedirs(comb_out_folder, exist_ok=True)
+                temp = np.copy(grad)
+                temp = np.uint16(temp)
+                imageio.imwrite(os.path.join(comb_out_folder, '{}.tif'.format(i)), temp)
 
             # Save each grad individually
             print('grad i max', np.max(it_grads))
@@ -486,14 +502,14 @@ def visualize_model(
                     file_i.split(os.path.sep)[-1])
                 out_pointer = out_pointer.split('.')[0] + '.tif'
 
-                # writes gradient plots right into output folder
-                f = plt.figure()
-                # was double writing in diff. formats
-                #imageio.imwrite(out_pointer, grad_i)
-                plt.imshow(grad_i)
-                plt.title('Pred=%s, label=%s' % (pred_i, label_i))
-                plt.savefig(out_pointer)
-                plt.close(f)
+                # # writes gradient plots right into output folder
+                # f = plt.figure()
+                # # was double writing in diff. formats
+                # #imageio.imwrite(out_pointer, grad_i)
+                # plt.imshow(grad_i)
+                # plt.title('Pred=%s, label=%s' % (pred_i, label_i))
+                # plt.savefig(out_pointer)
+                # plt.close(f)
 
             # Plot a moisaic of the grads
             if viz == 'none':
@@ -565,16 +581,16 @@ def visualize_model(
                 imageio.imwrite(out_pointer, _im)
 
 
-            # saves side-by-side crop and grad to specified folder
-            # New code
-            #  uses image_batch, it_grads, y, yhat vars (which have corresponding indices)
-            #  generates side-by-side visualizations with original and its gradient
-            if not comb_out_folder is None:
-                if not os.path.exists(comb_out_folder):
-                        os.makedirs(comb_out_folder)
-                for i, (img, grad, pred, actual) in enumerate(zip(image_batch, it_grads, yhat, y)):
-                    # saves image into specified folder, titled '{batch}_{num}.png'
-                    gops.plot_save_imgs(img, grad, os.path.join(comb_out_folder, str(idx) + '_' + str(i) + '.png'), pred, actual)
+            # # saves side-by-side crop and grad to specified folder
+            # # New code
+            # #  uses image_batch, it_grads, y, yhat vars (which have corresponding indices)
+            # #  generates side-by-side visualizations with original and its gradient
+            # if not comb_out_folder is None:
+            #     if not os.path.exists(comb_out_folder):
+            #             os.makedirs(comb_out_folder)
+            #     for i, (img, grad, pred, actual) in enumerate(zip(image_batch, it_grads, yhat, y)):
+            #         # saves image into specified folder, titled '{batch}_{num}.png'
+            #         gops.plot_save_imgs(img, grad, os.path.join(comb_out_folder, str(idx) + '_' + str(i) + '.png'), pred, actual)
 
         ckpt_yhat.append(yhat)
         ckpt_y.append(y)
@@ -625,7 +641,7 @@ if __name__ == '__main__':
         default=
         #'/Users/joshlamstein/Documents/GEDI3-master/tests/livetest',
         #'/Users/joshlamstein/Documents/GEDI3-master/ScientistLiveDead/BSLive',
-        '/Volumes/data/robodata/Gennadi/live_crop_test',
+        '/Volumes/data/robodata/Gennadi/BS_quarts/live/75',
         help="Directory containing your Live .tiff images.")
     parser.add_argument(
         "--dead_ims",
@@ -634,7 +650,7 @@ if __name__ == '__main__':
         default=
         #'/Users/joshlamstein/Documents/GEDI3-master/tests/deadtest',
         #'/Users/joshlamstein/Documents/GEDI3-master/ScientistLiveDead/BSDead',
-        '/Volumes/data/robodata/Gennadi/dead_crop_test',
+        '/Volumes/data/robodata/Gennadi/BS_quarts/dead/75',
         help="Directory containing your Dead .tiff images.")
     parser.add_argument(
         "--model_file",
@@ -675,13 +691,13 @@ if __name__ == '__main__':
         "--output_folder",
         type=str,
         dest="output_folder",
-        default='/Volumes/data/robodata/Gennadi/gradient_images/',
+        default='/Volumes/data/robodata/Gennadi/BS_quarts/grads/75',
         help='Folder to save the visualizations.')
     parser.add_argument(
        "--combined_out_folder",
        type=str,
        dest="comb_out_folder",
-       default='/Volumes/data/robodata/Gennadi/gradient_images/combined/',
+       default='/Volumes/data/robodata/Gennadi/BS_quarts/grads/75/combined',
        help='Folder for side-by-side originals and visualizations'
     )
 
