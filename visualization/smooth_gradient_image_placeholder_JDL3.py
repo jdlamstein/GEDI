@@ -14,6 +14,8 @@ Adjusted default param from trained weights
 Added comb_out_folder to main function
 Added suppress_out to image_batcher so it does not output crops during tests
 
+More recent:
+code architecture designed to operate in batches but code itself does
 
 """
 
@@ -59,60 +61,60 @@ def normalize(ims, thresh=0.05, max_val=None):
     return norm_im
 
 
-def alpha_mosaic(
-        ims,
-        maps,
-        output,
-        title='Mosaic',
-        rc=None,
-        cc=None,
-        top_n=None,
-        cmap='gray',
-        vmax=None,
-        pad=True,
-        colorbar=False):
-    if rc is None:
-        rc = np.ceil(np.sqrt(len(maps))).astype(int)
-        cc = np.ceil(np.sqrt(len(maps))).astype(int)
-    if top_n is not None:
-        l2 = np.asarray([np.sum(x ** 2) for x in maps])
-        l2_order = np.argsort(l2)[::-1]
-        maps = maps[l2_order]
-        maps = maps[:top_n]
-    f = plt.figure(figsize=(10, 10))
-    plt.suptitle(title, fontsize=20)
-    gs1 = gridspec.GridSpec(rc, cc)
-    gs1.update(wspace=0.2, hspace=0)  # set the spacing between axes.
-    for idx, (tpn_ap_grads, im) in enumerate(zip(maps, ims)):
-        ax1 = plt.subplot(gs1[idx])
-        plt.axis('off')
-        ax1.set_xticklabels([])
-        ax1.set_yticklabels([])
-        ax1.set_aspect('equal')
-
-        if pad:
-            trim_h, trim_w = 1, 5
-            tpn_ap_grads = np.flipud(tpn_ap_grads)
-            tpn_ap_grads = tpn_ap_grads[:-trim_h, trim_w:]
-            im = im[:-trim_h, :-trim_w]
-
-        alphas = Normalize(0, 0.4, clip=True)(np.abs(tpn_ap_grads))
-        alphas = np.clip(alphas, .05, .9)
-        vmax = np.percentile(tpn_ap_grads, 99.9)
-        vmin = np.percentile(tpn_ap_grads, 0.1)
-        tpn_ap_grads = Normalize(vmin, vmax)(tpn_ap_grads)
-        tpn_ap_grads = cmap(tpn_ap_grads)
-        tpn_ap_grads[..., -1] = alphas
-        ax1.imshow(
-            exposure.equalize_adapthist(im, clip_limit=0.008), cmap='Greens')
-        xmin, ymin = 0, 0
-        xmax, ymax = im.shape[:2]
-        cf = ax1.imshow(tpn_ap_grads, extent=(xmin, xmax, ymin, ymax))
-        if colorbar and idx == len(maps) - 1:
-            plt.colorbar(cf)
-    plt.savefig(output)
-    # plt.show()
-    plt.close(f)
+# def alpha_mosaic(
+#         ims,
+#         maps,
+#         output,
+#         title='Mosaic',
+#         rc=None,
+#         cc=None,
+#         top_n=None,
+#         cmap='gray',
+#         vmax=None,
+#         pad=True,
+#         colorbar=False):
+#     if rc is None:
+#         rc = np.ceil(np.sqrt(len(maps))).astype(int)
+#         cc = np.ceil(np.sqrt(len(maps))).astype(int)
+#     if top_n is not None:
+#         l2 = np.asarray([np.sum(x ** 2) for x in maps])
+#         l2_order = np.argsort(l2)[::-1]
+#         maps = maps[l2_order]
+#         maps = maps[:top_n]
+#     f = plt.figure(figsize=(10, 10))
+#     plt.suptitle(title, fontsize=20)
+#     gs1 = gridspec.GridSpec(rc, cc)
+#     gs1.update(wspace=0.2, hspace=0)  # set the spacing between axes.
+#     for idx, (tpn_ap_grads, im) in enumerate(zip(maps, ims)):
+#         ax1 = plt.subplot(gs1[idx])
+#         plt.axis('off')
+#         ax1.set_xticklabels([])
+#         ax1.set_yticklabels([])
+#         ax1.set_aspect('equal')
+#
+#         if pad:
+#             trim_h, trim_w = 1, 5
+#             tpn_ap_grads = np.flipud(tpn_ap_grads)
+#             tpn_ap_grads = tpn_ap_grads[:-trim_h, trim_w:]
+#             im = im[:-trim_h, :-trim_w]
+#
+#         alphas = Normalize(0, 0.4, clip=True)(np.abs(tpn_ap_grads))
+#         alphas = np.clip(alphas, .05, .9)
+#         vmax = np.percentile(tpn_ap_grads, 99.9)
+#         vmin = np.percentile(tpn_ap_grads, 0.1)
+#         tpn_ap_grads = Normalize(vmin, vmax)(tpn_ap_grads)
+#         tpn_ap_grads = cmap(tpn_ap_grads)
+#         tpn_ap_grads[..., -1] = alphas
+#         ax1.imshow(
+#             exposure.equalize_adapthist(im, clip_limit=0.008), cmap='Greens')
+#         xmin, ymin = 0, 0
+#         xmax, ymax = im.shape[:2]
+#         cf = ax1.imshow(tpn_ap_grads, extent=(xmin, xmax, ymin, ymax))
+#         if colorbar and idx == len(maps) - 1:
+#             plt.colorbar(cf)
+#     plt.savefig(output)
+#     # plt.show()
+#     plt.close(f)
 
 
 def flatten_list(l):
@@ -129,6 +131,10 @@ def save_images(
         target,
         label_dict,
         ext='.png'):
+
+    # adding folder to contain gradients
+    output_folder = os.path.join(output_folder, 'grads')
+
     """Save TP/FP/TN/FN images in separate folders."""
     quality = ['true', 'false']
     folders = [[os.path.join(
@@ -137,7 +143,7 @@ def save_images(
         output_folder, '%s_%s' % (
             k, quality[1]))] for k in label_dict.keys()]
     flat_folders = flatten_list(folders)
-    [make_dir(f) for f in flat_folders]
+    [os.makedirs(f, exist_ok=True) for f in flat_folders]
     for iy, iyhat, iviz, ifiles in list(zip(y, yhat, viz, files)):
         print(iy.shape)
         print(iyhat.shape)
@@ -192,8 +198,9 @@ def visualization_function(images, viz):
     """Wrapper for summarizing visualizations across channels."""
     if viz == 'sum_abs':
         return np.sum(np.abs(images), axis=-1)
+        # return np.sum(images, axis=-1)
     elif viz == 'sum_p':
-        return np.sum(np.pow(images, 2), axis=-1)
+        return np.sum(np.power(images, 2), axis=-1)
     elif viz == 'none':
         return images
     else:
@@ -215,9 +222,9 @@ def crop_center(img, crop_size):
     return img[starty:starty + cy, startx:startx + cx]
 
 # not used
-def crop_and_save(savename,img, crop_size):
-    im = crop_center(img, crop_size)
-    imageio.imwrite(savename, im)
+# def crop_and_save(savename,img, crop_size):
+#     im = crop_center(img, crop_size)
+#     imageio.imwrite(savename, im)
 
 def renormalize(img, max_value, min_value):
     """Normalize images to [0, 1]."""
@@ -330,7 +337,7 @@ def visualize_model(
         untargeted=False,
         viz='none',
         per_timepoint=True,
-        comb_out_folder=None):
+        combined=True):
     """Train an SVM for your dataset on GEDI-model encodings."""
     config = GEDIconfig()
     if live_ims is None:
@@ -346,8 +353,8 @@ def visualize_model(
     live_files = glob(os.path.join(live_ims, '*%s' % config.raw_im_ext))
     dead_files = glob(os.path.join(dead_ims, '*%s' % config.raw_im_ext))
 
-    shuffle(live_files)
-    shuffle(dead_files)
+    # shuffle(live_files)
+    # shuffle(dead_files)
     live_files = live_files[:1]
     dead_files = dead_files[:1]
 
@@ -358,7 +365,7 @@ def visualize_model(
     if len(combined_files) == 0:
         raise RuntimeError('Could not find any files. Check your image path.')
 
-    config = GEDIconfig()
+    # config = GEDIconfig()
     model_file_path = os.path.sep.join(model_file.split(os.path.sep)[:-1])
     meta_file_pointer = os.path.join(
         model_file_path,
@@ -407,10 +414,11 @@ def visualize_model(
         scores = vgg.fc7
         preds = tf.argmax(vgg.prob, 1)
         activity_pattern = vgg.fc8
+        # activity_pattern = activity_pattern[:, 1]
         print('activity pattern', activity_pattern.get_shape())
         if not untargeted:
             oh_labels = tf.one_hot(labels, config.output_shape)
-            print(oh_labels.get_shape())
+            print('oh labels', oh_labels.get_shape())
             activity_pattern *= oh_labels
         grad_image = tf.gradients(activity_pattern, images)  # Takes gradient of image
 
@@ -430,7 +438,7 @@ def visualize_model(
         config.validation_batch = len(combined_files)
 
     count = 0
-    for idx, c in tqdm(enumerate(ckpts), desc='Running checkpoints'):
+    for idx, c in tqdm(enumerate(ckpts), desc='Running checkpoints'): # obsolete; typically only one ckpt to loop over
         dec_scores, yhat, y, file_array, viz_images = [], [], [], [], []
         # Initialize the graph
         sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True))
@@ -465,26 +473,59 @@ def visualize_model(
             sc, tyh = sess.run(
                 [scores, preds],
                 feed_dict=feed_dict)
-            for _ in range(smooth_iterations):
-                feed_dict = {
-                    images: add_noise(image_batch),
-                    labels: label_batch
-                }
-                it_grad = sess.run(
-                    grad_image,
-                    feed_dict=feed_dict)
-                it_grads += it_grad[0]  # Z projection
+        # for _ in range(smooth_iterations):
+            feed_dict = {
+                images: add_noise(image_batch),
+                labels: label_batch
+            }
+            it_grad = sess.run(
+                grad_image,
+                feed_dict=feed_dict)
+            it_grads += it_grad[0]  # Z projection
             print('it grad shape', np.shape(it_grad))
 
             it_grads /= smooth_iterations  # Mean across iterations
+
+            def imclean(img):
+                temp = np.copy(img)
+                if temp.shape[-1] == 3: temp = visualization_function(temp, viz)
+                # temp = np.interp(temp, [np.min(temp), np.max(temp)], [0, 65535])
+                temp -= np.amin(temp)
+                temp /= np.amax(temp)
+                temp *= 65535
+                temp = np.uint16(temp)
+                return temp
+
+            comb_fold = os.path.join(output_folder, 'combined')
+            os.makedirs(comb_fold, exist_ok=True)
+            for i, grad in enumerate(it_grads):
+                temp = np.copy(grad)
+                red = temp[:,:,0]
+                green = temp[:,:,1]
+                blue = temp[:,:,2]
+                pos = lambda arr: np.maximum(arr, 0)
+                neg = lambda arr: np.abs(np.minimum(arr, 0))
+
+                temp = imclean(temp)
+                imageio.imwrite(os.path.join(comb_fold, '{}.tif'.format(i)), temp)
+                imageio.imwrite(os.path.join(comb_fold, '{}.p.tif'.format(i)), pos(temp))
+                imageio.imwrite(os.path.join(comb_fold, '{}.n.tif'.format(i)), neg(temp))
+                for j, img in enumerate(map(imclean, (red, green, blue))):
+                    # print(img.shape)
+                    # print(pos(img.shape))
+                    imageio.imwrite(os.path.join(comb_fold, '{}.{}.tif'.format(i, j)), img)
+                    imageio.imwrite(os.path.join(comb_fold, '{}.{}.p.tif'.format(i, j)), pos(img))
+                    imageio.imwrite(os.path.join(comb_fold, '{}.{}.n.tif'.format(i, j)), neg(img))
+
+
             it_grads = visualization_function(it_grads, viz)
             print('it grads shape', np.shape(it_grads))
 
-            for i, grad in enumerate(it_grads):
-                os.makedirs(comb_out_folder, exist_ok=True)
-                temp = np.copy(grad)
-                temp = np.uint16(temp)
-                imageio.imwrite(os.path.join(comb_out_folder, '{}.tif'.format(i)), temp)
+            # for i, grad in enumerate(it_grads):
+            #     temp = np.copy(grad)
+            #     temp = np.uint16(temp)
+            #     imageio.imwrite(os.path.join(comb_fold, '_{}.tif'.format(i)), temp)
+
 
             # Save each grad individually
             print('grad i max', np.max(it_grads))
@@ -510,40 +551,44 @@ def visualize_model(
                 # plt.title('Pred=%s, label=%s' % (pred_i, label_i))
                 # plt.savefig(out_pointer)
                 # plt.close(f)
+            # for i, grad in enumerate(it_grads):
+            #     temp = np.copy(grad)
+            #     temp = np.uint16(temp)
+            #     imageio.imwrite(os.path.join(comb_fold, '__{}.tif'.format(i)), temp)
 
-            # Plot a moisaic of the grads
-            if viz == 'none':
-                pos_grads = normalize(np.maximum(it_grads, 0))
-                neg_grads = normalize(np.minimum(it_grads, 0))
-                alpha_mosaic(
-                    image_batch,
-                    pos_grads,
-                    'pos_batch_%s.pdf' % count,
-                    title='Positive gradient overlays.',
-                    rc=1,
-                    cc=len(image_batch),
-                    cmap=plt.cm.Reds)
-                alpha_mosaic(
-                    image_batch,
-                    neg_grads,
-                    'neg_batch_%s.pdf' % count,
-                    title='Negative gradient overlays.',
-                    rc=1,
-                    cc=len(image_batch),
-                    cmap=plt.cm.Reds)
-            else:
-                alpha_mosaic(
-                    image_batch,
-                    it_grads,
-                    output_folder + '/batch_%s.pdf' % count,
-                    title='Gradient overlays.',
-                    rc=1,
-                    cc=len(image_batch),
-                    cmap=plt.cm.Reds)
-            count += 1
+            # # Plot a moisaic of the grads
+            # if viz == 'none':
+            #     pos_grads = normalize(np.maximum(it_grads, 0))
+            #     neg_grads = normalize(np.minimum(it_grads, 0))
+            #     alpha_mosaic(
+            #         image_batch,
+            #         pos_grads,
+            #         'pos_batch_%s.pdf' % count,
+            #         title='Positive gradient overlays.',
+            #         rc=1,
+            #         cc=len(image_batch),
+            #         cmap=plt.cm.Reds)
+            #     alpha_mosaic(
+            #         image_batch,
+            #         neg_grads,
+            #         'neg_batch_%s.pdf' % count,
+            #         title='Negative gradient overlays.',
+            #         rc=1,
+            #         cc=len(image_batch),
+            #         cmap=plt.cm.Reds)
+            # else:
+            #     alpha_mosaic(
+            #         image_batch,
+            #         it_grads,
+            #         output_folder + '/batch_%s.pdf' % count,
+            #         title='Gradient overlays.',
+            #         rc=1,
+            #         cc=len(image_batch),
+            #         cmap=plt.cm.Reds)
+            # count += 1
 
             # Store the results
-            dec_scores += [sc]  
+            dec_scores += [sc]
             yhat = np.append(yhat, tyh)
             y = np.append(y, label_batch)
             file_array = np.append(file_array, file_batch)
@@ -556,10 +601,10 @@ def visualize_model(
             for folder in (live_folder, dead_folder):
                 if not os.path.exists(folder):
                     os.makedirs(folder)
-            
+
             for _im, file_i, lbl in zip(image_batch, file_batch, y):
                 '''Saves cropped input images for comparison'''
-#                print(np.unique(_im))
+                #                print(np.unique(_im))
                 print('shape', np.shape(_im))
                 print('max _im', np.max(_im))
                 print('min _im', np.min(_im))
@@ -581,16 +626,15 @@ def visualize_model(
                 imageio.imwrite(out_pointer, _im)
 
 
-            # # saves side-by-side crop and grad to specified folder
-            # # New code
-            # #  uses image_batch, it_grads, y, yhat vars (which have corresponding indices)
-            # #  generates side-by-side visualizations with original and its gradient
-            # if not comb_out_folder is None:
-            #     if not os.path.exists(comb_out_folder):
-            #             os.makedirs(comb_out_folder)
-            #     for i, (img, grad, pred, actual) in enumerate(zip(image_batch, it_grads, yhat, y)):
-            #         # saves image into specified folder, titled '{batch}_{num}.png'
-            #         gops.plot_save_imgs(img, grad, os.path.join(comb_out_folder, str(idx) + '_' + str(i) + '.png'), pred, actual)
+            # saves side-by-side crop and grad to specified folder
+            # New code
+            #  uses image_batch, it_grads, y, yhat vars (which have corresponding indices)
+            #  generates side-by-side visualizations with original and its gradient
+            comb_fold = os.path.join(output_folder, 'combined')
+            os.makedirs(comb_fold, exist_ok=True)
+            for i, (img, grad, pred, actual) in enumerate(zip(image_batch, it_grads, yhat, y)):
+                # saves image into specified folder, titled '{batch}_{num}.png'
+                gops.plot_save_imgs(img, grad, os.path.join(comb_fold, str(idx) + '_' + str(i) + '.tif'), pred, actual)
 
         ckpt_yhat.append(yhat)
         ckpt_y.append(y)
@@ -686,7 +730,7 @@ if __name__ == '__main__':
         type=str,
         dest="viz",
         default='sum_abs',
-        help='Number of iterations of smoothing for visualizations.')
+        help='Number of iterations of smoothing for visualizations.') # inaccurate help statement
     parser.add_argument(
         "--output_folder",
         type=str,
@@ -694,11 +738,10 @@ if __name__ == '__main__':
         default='/Volumes/data/robodata/Gennadi/BS_quarts/grads/75',
         help='Folder to save the visualizations.')
     parser.add_argument(
-       "--combined_out_folder",
-       type=str,
-       dest="comb_out_folder",
-       default='/Volumes/data/robodata/Gennadi/BS_quarts/grads/75/combined',
-       help='Folder for side-by-side originals and visualizations'
+       "--combined",
+       dest="combined",
+       action='store_true',
+       help='Store side-by-side crops and visualizations'
     )
 
     args = parser.parse_args()
