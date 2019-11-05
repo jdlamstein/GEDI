@@ -178,7 +178,7 @@ def train_vgg16(train_dir=None, validation_dir=None):
                     cost = softmax_cost(vgg.fc8, train_labels)
             tf.summary.scalar("cost", cost)
 
-            # Finetune the learning rates
+            # Finetune the learning rates!!!
             if config.wd_layers is not None:
                 _, l2_wd_layers = fine_tune_prepare_layers(
                     tf.trainable_variables(), config.wd_layers)
@@ -286,7 +286,7 @@ def train_vgg16(train_dir=None, validation_dir=None):
                     saver.save(
                         sess, os.path.join(
                             config.train_checkpoint,
-                            'model_' + str(step) + '.ckpt'), global_step=step)
+                            'tweaked_model_' + str(step) + '.ckpt'), global_step=step)
                     # Store the new max validation accuracy
                     # val_max = val_acc
 
