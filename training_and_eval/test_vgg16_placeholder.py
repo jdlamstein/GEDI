@@ -53,6 +53,8 @@ def image_batcher(
                 divide_panel=config.divide_panel,
                 max_value=config.max_gedi,
                 min_value=config.min_gedi).astype(np.float32)
+            # print('patch shape 1', np.shape(patch))
+
             # 2. Repeat to 3 channel (RGB) image
             patch = np.repeat(patch[:, :, None], 3, axis=-1)
             # 3. Renormalize based on the training set intensities
@@ -61,7 +63,10 @@ def image_batcher(
                 max_value=training_max,
                 min_value=training_min)
             # 4. Crop the center
+            # print('patch shape 2', np.shape(patch))
+
             patch = crop_center(patch, config.model_image_size[:2])
+            # print('patch shape 3', np.shape(patch))
             # 5. Clip to [0, 1] just in case
             patch[patch > 1.] = 1.
             patch[patch < 0.] = 0.
@@ -69,7 +74,7 @@ def image_batcher(
             image_stack += [patch[None, :, :, :]]
         # Add dimensions and concatenate
         start += config.validation_batch
-        print(type(next_image_batch))
+        # print(type(next_image_batch))
         yield np.concatenate(image_stack, axis=0), next_image_batch
 
 
@@ -281,19 +286,19 @@ if __name__ == '__main__':
         "--image_dir",
         type=str,
         dest="image_dir",
-        default = '/Volumes/data/robodata/Josh/GalaxyTEMP/PID9TEST/A1',
+        default = '/mnt/finkbeinerlab/robodata/GalaxyTEMP/BSMachineLearning_TestCuration/batches/1',
         help="Directory containing your .tiff images.")
     parser.add_argument(
         "--model_file",
         type=str,
         dest="model_file",
-        default='/Users/joshlamstein/Documents/pretrained_weights/trained_gedi_model/model_58600.ckpt-58600',
+        default='/home/jlamstein/Documents/pretrained_weights/trained_gedi_model/model_58600.ckpt-58600',
         help="Folder containing your trained CNN's checkpoint files.")
     parser.add_argument(
         "--training_max",
         type=float,
         dest="training_max",
         default=None,
-        help="Maximum intesity value.")
+        help="Maximum intensity value.")
     args = parser.parse_args()
     test_vgg16(**vars(args))

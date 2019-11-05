@@ -165,13 +165,13 @@ def test_vgg16(
     # Loop through each checkpoint then test the entire validation set
     ckpts = [model_file]
     ckpt_yhat, ckpt_y, ckpt_scores, ckpt_file_array = [], [], [], []
-    print '-' * 60
-    print 'Beginning evaluation'
-    print '-' * 60
+    print('-' * 60)
+    print('Beginning evaluation')
+    print('-' * 60)
 
     if config.validation_batch > len(combined_files):
-        print 'Trimming validation_batch size to %s (same as # of files).' % len(
-            combined_files)
+        print('Trimming validation_batch size to %s (same as # of files).' % len(
+            combined_files))
         config.validation_batch = len(combined_files)
 
     for idx, c in tqdm(enumerate(ckpts), desc='Running checkpoints'):
@@ -213,8 +213,8 @@ def test_vgg16(
         ckpt_y.append(y)
         ckpt_scores.append(dec_scores)
         ckpt_file_array.append(file_array)
-        print 'Batch %d took %.1f seconds' % (
-            idx, time.time() - start_time)
+        print('Batch %d took %.1f seconds' % (
+            idx, time.time() - start_time))
     sess.close()
 
     # Save everything
@@ -236,10 +236,10 @@ def test_vgg16(
     clf.fit(np.concatenate(dec_scores), y)
     # mu = dec_scores.mean(0)
     # sd = dec_scores.std(0)
-    print '%s-fold SVM performance: accuracy = %s%% , p = %.5f' % (
+    print('%s-fold SVM performance: accuracy = %s%% , p = %.5f' % (
         k_folds,
         np.mean(cv_performance * 100),
-        p_value)
+        p_value))
     np.savez(
         os.path.join(out_dir, 'svm_data'),
         yhat=predictions,
@@ -266,11 +266,11 @@ def test_vgg16(
                 y.reshape(-1, 1))),
             columns=['files', 'guesses', 'true label'])
         df.to_csv(os.path.join(out_dir, 'prediction_file.csv'))
-        print 'Saved csv to: %s' % out_dir
+        print('Saved csv to: %s' % out_dir)
     except:
-        print 'X' * 60
-        print 'Could not save a spreadsheet of file info'
-        print 'X' * 60
+        print('X' * 60)
+        print('Could not save a spreadsheet of file info')
+        print('X' * 60)
 
     # save the classifier
     with open('%s.pkl' % svm_model, 'wb') as fid:
@@ -280,7 +280,7 @@ def test_vgg16(
         #     'sd': sd
         # }
         cPickle.dump(clf, fid)
-    print 'Saved svm model to: %s.pkl' % svm_model
+    print('Saved svm model to: %s.pkl' % svm_model)
 
 
 if __name__ == '__main__':

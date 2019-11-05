@@ -276,19 +276,19 @@ if __name__ == '__main__':
         "--image_dir",
         type=str,
         dest="image_dir",
-        default='/Volumes/data/robodata/Viral/GalaxyData/PID9EosTau-VO-TauSurvival/ObjectCrops',
+        default='/mnt/finkbeinerlab/robodata/Cathrine/GalaxyData/GXYTMP-CampariAPP2template-DNA/ObjectCrops',
         help="Directory containing your .tiff images.")
     parser.add_argument(
         "--model_file",
         type=str,
         dest="model_file",
-        default='/Users/joshlamstein/Documents/pretrained_weights/trained_gedi_model/model_58600.ckpt-58600',
+        default='/home/jlamstein/Documents/pretrained_weights/trained_gedi_model/model_58600.ckpt-58600',
         help="Folder containing your trained CNN's checkpoint files.")
     parser.add_argument(
         "--training_max",
         type=float,
         dest="training_max",
         default=None,
-        help="Maximum intesity value.")
+        help="Maximum intensity value.")
     args = parser.parse_args()
     test_vgg16(**vars(args))
