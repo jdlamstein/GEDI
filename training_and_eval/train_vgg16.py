@@ -94,7 +94,9 @@ def train_vgg16(train_dir=None, validation_dir=None):
     print('Training model:' + dt_dataset)
     print('-'*60)
 
-    # Prepare data on CPU
+    # Prepare data on CPU'
+    print('train data', train_data)
+    print('val data', validation_data)
     assert os.path.exists(train_data)
     assert os.path.exists(validation_data)
     assert os.path.exists(config.vgg16_weight_path)
@@ -130,7 +132,10 @@ def train_vgg16(train_dir=None, validation_dir=None):
                 vgg_output = 1
             elif config.ordinal_classification is None:
                 vgg_output = config.output_shape
-            vgg = vgg16.Vgg16(
+            # vgg = vgg16.Vgg16(
+            #     vgg16_npy_path=config.vgg16_weight_path,
+            #     fine_tune_layers=config.fine_tune_layers)
+            vgg = vgg16.model_struct(
                 vgg16_npy_path=config.vgg16_weight_path,
                 fine_tune_layers=config.fine_tune_layers)
             train_mode = tf.get_variable(name='training', initializer=True)
@@ -189,8 +194,11 @@ def train_vgg16(train_dir=None, validation_dir=None):
 
             # for all variables in trainable variables
             # print name if there's duplicates you fucked up
+
             other_opt_vars, ft_opt_vars = fine_tune_prepare_layers(
                 tf.trainable_variables(), config.fine_tune_layers)
+            print('other opt vars', other_opt_vars)
+            print('ft opt vars', ft_opt_vars)
             if config.optimizer == 'adam':
                 train_op = ft_non_optimized(
                     cost, other_opt_vars, ft_opt_vars,
@@ -215,7 +223,10 @@ def train_vgg16(train_dir=None, validation_dir=None):
             if validation_data is not False:
                 scope.reuse_variables()
                 # Validation graph is the same as training except no batchnorm
-                val_vgg = vgg16.Vgg16(
+                # val_vgg = vgg16.Vgg16(
+                #     vgg16_npy_path=config.vgg16_weight_path,
+                #     fine_tune_layers=config.fine_tune_layers)
+                val_vgg = vgg16.model_struct(
                     vgg16_npy_path=config.vgg16_weight_path,
                     fine_tune_layers=config.fine_tune_layers)
                 val_vgg.build(val_images, output_shape=vgg_output)

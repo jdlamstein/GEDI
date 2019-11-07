@@ -42,19 +42,19 @@ def read_and_decode_single_example(
         features = tf.parse_single_example(
             serialized_example,
             features={
-                   'label': tf.FixedLenFeature([], tf.int64),
-                   'image': tf.FixedLenFeature([], tf.string),
-                   'filename': tf.FixedLenFeature([], tf.string)
-                }
-            )
+                'label': tf.FixedLenFeature([], tf.int64),
+                'image': tf.FixedLenFeature([], tf.string),
+                'filename': tf.FixedLenFeature([], tf.string)
+            }
+        )
     else:
         features = tf.parse_single_example(
             serialized_example,
             features={
-                   'label': tf.FixedLenFeature([], tf.int64),
-                   'image': tf.FixedLenFeature([], tf.string),
-                }
-            )
+                'label': tf.FixedLenFeature([], tf.int64),
+                'image': tf.FixedLenFeature([], tf.string),
+            }
+        )
 
     # Convert from a scalar string tensor (whose single string has
     image = tf.decode_raw(features['image'], tf.float32)
@@ -107,7 +107,7 @@ def read_and_decode_single_example(
         elif 'random_contrast' in train:
             image = tf.image.random_contrast(image, lower=0.5, upper=1.5)
         elif 'random_brightness' in train:
-            image = tf.image.random_brightness(image, max_delta=32./255.)
+            image = tf.image.random_brightness(image, max_delta=32. / 255.)
         else:
             image = tf.image.resize_image_with_crop_or_pad(
                 image, model_input_shape[0], model_input_shape[1])
@@ -132,7 +132,7 @@ def random_contrast_brightness(
         image,
         lower=0.5,
         upper=1.5,
-        max_delta=32./255.):
+        max_delta=32. / 255.):
     return tf.cond(
         tf.random_uniform([], minval=0, maxval=1) > 0.5,
         lambda: tf.image.random_contrast(image, lower=lower, upper=upper),
@@ -153,7 +153,7 @@ def read_and_decode(
         normalize=False):
     reader = tf.TFRecordReader()
     _, serialized_example = reader.read(filename_queue)
-    features={
+    features = {
         'label': tf.FixedLenFeature([], tf.int64),
         'image': tf.FixedLenFeature([], tf.string)
     }
@@ -202,10 +202,12 @@ def read_and_decode(
     if max_value is None:
         max_value = tf.reduce_max(image, keep_dims=True)
     else:
-        max_value = max_value[None, None, None]
+        # max_value = max_value[None, None, None]
+        max_value = max_value
     if not isinstance(max_value, tf.Tensor):
         # If we have max and min numpys, normalize to global [0, 1]
-        min_value = min_value[None, None, None]
+        # min_value = min_value[None, None, None]
+        min_value=min_value
         image = (image - min_value) / (max_value - min_value)
     else:
         # Normalize to the max_value
@@ -232,7 +234,7 @@ def read_and_decode(
         elif 'random_contrast' in train:
             image = tf.image.random_contrast(image, lower=0.5, upper=1.5)
         elif 'random_brightness' in train:
-            image = tf.image.random_brightness(image, max_delta=32./255.)
+            image = tf.image.random_brightness(image, max_delta=32. / 255.)
         else:
             image = tf.image.resize_image_with_crop_or_pad(
                 image, model_input_shape[0], model_input_shape[1])

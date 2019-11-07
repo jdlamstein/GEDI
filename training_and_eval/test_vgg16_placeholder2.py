@@ -171,6 +171,10 @@ def test_vgg16(
         config.validation_batch = len(combined_files)
 
     for idx, c in tqdm(enumerate(ckpts), desc='Running checkpoints'):
+        print('Var dict')
+        print(vgg.var_dict)
+        print('View checkpoint')
+        print(tf.train.list_variables(c))
         dec_scores, yhat, file_array = [], [], []
         # Initialize the graph
         sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True))
@@ -276,7 +280,7 @@ if __name__ == '__main__':
         "--image_dir",
         type=str,
         dest="image_dir",
-        default='/mnt/finkbeinerlab/robodata/Cathrine/GalaxyData/GXYTMP-CampariAPP2template-DNA/ObjectCrops',
+        default='/mnt/finkbeinerlab/robodata/JaslinTemp/GalaxyData/LINCS-diMNs/LINCS072017RGEDI-A/Galaxy-wholeplate/Galaxy/CroppedImages',
         help="Directory containing your .tiff images.")
     parser.add_argument(
         "--model_file",
