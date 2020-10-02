@@ -1,8 +1,8 @@
 """
-Runs GEDI model with pretrained weights. 
+Runs GEDI model with pretrained weights.
 
 To do:
-    Get missing variables - training_loss.npy, ckpt_y. It's odd ckpt_y is missing, makes me think the plots are not used. 
+    Get missing variables - training_loss.npy, ckpt_y. It's odd ckpt_y is missing, makes me think the plots are not used.
 """
 
 import os
@@ -14,13 +14,12 @@ import pandas as pd
 from argparse import ArgumentParser
 from glob import glob
 from exp_ops.tf_fun import make_dir
-from exp_ops.plotting_fun import plot_accuracies, plot_std, plot_cms, plot_pr,\
+from exp_ops.plotting_fun import plot_accuracies, plot_std, plot_cms, plot_pr, \
     plot_cost
 from exp_ops.preprocessing_GEDI_images import produce_patch
 from gedi_config import GEDIconfig
 from models import baseline_vgg16 as vgg16
 from tqdm import tqdm
-import matplotlib.pyplot as plt
 
 
 def crop_center(img, crop_size):
@@ -54,12 +53,6 @@ def image_batcher(
                 divide_panel=config.divide_panel,
                 max_value=config.max_gedi,
                 min_value=config.min_gedi).astype(np.float32)
-            # print('patch shape 1', np.shape(patch))
-            # Matches to 8 decimals with gedi-order
-            # print(patch[-1, :])
-            # print('f', f)
-            # exit()
-
             # 2. Repeat to 3 channel (RGB) image
             patch = np.repeat(patch[:, :, None], 3, axis=-1)
             # 3. Renormalize based on the training set intensities
@@ -67,26 +60,15 @@ def image_batcher(
                 patch,
                 max_value=training_max,
                 min_value=training_min)
-            # Matches to 8 decimals with gedi-order
-            # print(patch[-1, :, 0])
-            # print('f', f)
-            # exit()
             # 4. Crop the center
-
             patch = crop_center(patch, config.model_image_size[:2])
             # 5. Clip to [0, 1] just in case
             patch[patch > 1.] = 1.
             patch[patch < 0.] = 0.
-            # Matches to 8 decimals with gedi-order
-            # print(patch[-1, :, 0]*255)
-            # print('f', f)
-            # exit()
-
             # 6. Add to list
             image_stack += [patch[None, :, :, :]]
         # Add dimensions and concatenate
         start += config.validation_batch
-        # print(type(next_image_batch))
         yield np.concatenate(image_stack, axis=0), next_image_batch
 
 
@@ -108,14 +90,13 @@ def test_vgg16(
         output_csv='prediction_file',
         training_max=None):
     print(image_dir)
-    # tf.set_random_seed(0)
     config = GEDIconfig()
     if image_dir is None:
         raise RuntimeError(
             'You need to supply a directory path to the images.')
 
     combined_files = np.asarray(
-        glob(os.path.join(image_dir, '*%s' % config.raw_im_ext)))
+        glob(os.path.join(image_dir, '*','*', '*%s' % config.raw_im_ext)))
     if len(combined_files) == 0:
         raise RuntimeError('Could not find any files. Check your image path.')
 
@@ -150,11 +131,11 @@ def test_vgg16(
     # Prepare data on CPU
     if config.model_image_size[-1] < 3:
         print('*' * 60)
-        print (
+        print(
             'Warning: model is expecting a H/W/1 image. '
             'Do you mean to set the last dimension of '
             'config.model_image_size to 3?')
-        print( '*' * 60)
+        print('*' * 60)
 
     images = tf.placeholder(
         tf.float32,
@@ -170,7 +151,6 @@ def test_vgg16(
             vgg.build(
                 images,
                 output_shape=config.output_shape)
-            print('data dict', vgg.data_dict)
 
         # Setup validation op
         scores = vgg.prob
@@ -187,51 +167,52 @@ def test_vgg16(
     print('-' * 60)
 
     if config.validation_batch > len(combined_files):
-        print('Trimming validation_batch size to %s (same as # of files).' % len(combined_files) )
+        print('Trimming validation_batch size to %s (same as # of files).' % len(combined_files))
         config.validation_batch = len(combined_files)
-    
+
     for idx, c in tqdm(enumerate(ckpts), desc='Running checkpoints'):
+        print('Var dict')
+        print(vgg.var_dict)
+        print('View checkpoint')
+        print(tf.train.list_variables(c))
         dec_scores, yhat, file_array = [], [], []
         # Initialize the graph
-       
-#        sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True))
-        
-        with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:
-            sess.run(
-                tf.group(
-                    tf.global_variables_initializer(),
-                    tf.local_variables_initializer()))
-    
-            # Set up exemplar threading
-            saver.restore(sess, c)  # overwrites weights in the graph
-            start_time = time.time()
-            num_batches = np.floor(
-                len(combined_files) / float(
-                    config.validation_batch)).astype(int)
-            for image_batch, file_batch in tqdm(
-                    image_batcher(
-                        start=0,
-                        num_batches=num_batches,
-                        images=combined_files,
-                        config=config,
-                        training_max=training_max,
-                        training_min=training_min),
-                    total=num_batches):
-                feed_dict = {
-                    images: image_batch
-                }
-                sc, tyh = sess.run(
-                    [scores, preds],
-                    feed_dict=feed_dict)
-                dec_scores = np.append(dec_scores, sc)
-                yhat = np.append(yhat, tyh)
-                file_array = np.append(file_array, file_batch)
-            ckpt_yhat.append(yhat)
-            ckpt_scores.append(dec_scores)
-            ckpt_file_array.append(file_array)
-            print('Batch %d took %.1f seconds' % (
-                idx, time.time() - start_time) )
-#    sess.close()
+        sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True))
+        sess.run(
+            tf.group(
+                tf.global_variables_initializer(),
+                tf.local_variables_initializer()))
+
+        # Set up exemplar threading
+        saver.restore(sess, c)
+        start_time = time.time()
+        num_batches = np.floor(
+            len(combined_files) / float(
+                config.validation_batch)).astype(int)
+        for image_batch, file_batch in tqdm(
+                image_batcher(
+                    start=0,
+                    num_batches=num_batches,
+                    images=combined_files,
+                    config=config,
+                    training_max=training_max,
+                    training_min=training_min),
+                total=num_batches):
+            feed_dict = {
+                images: image_batch
+            }
+            sc, tyh = sess.run(
+                [scores, preds],
+                feed_dict=feed_dict)
+            dec_scores = np.append(dec_scores, sc)
+            yhat = np.append(yhat, tyh)
+            file_array = np.append(file_array, file_batch)
+        ckpt_yhat.append(yhat)
+        ckpt_scores.append(dec_scores)
+        ckpt_file_array.append(file_array)
+        print('Batch %d took %.1f seconds' % (
+            idx, time.time() - start_time))
+    sess.close()
 
     # Save everything
     print('Save npz.')
@@ -278,28 +259,28 @@ def test_vgg16(
         plot_pr(
             ckpt_y, ckpt_yhat, ckpt_scores, os.path.join(
                 out_dir, 'precision_recall.png'))
-#        plot_cost(
-#            os.path.join(out_dir, 'training_loss.npy'), ckpts,
-#            os.path.join(out_dir, 'training_costs.png'))
+    #        plot_cost(
+    #            os.path.join(out_dir, 'training_loss.npy'), ckpts,
+    #            os.path.join(out_dir, 'training_costs.png'))
     except:
-        print('X'*60)
+        print('X' * 60)
         print('Could not locate the loss numpy')
-        print('X'*60)
+        print('X' * 60)
 
 
 if __name__ == '__main__':
     parser = ArgumentParser()
-#    parser.add_argument(
-#        "--image_dir",
-#        type=str,
-#        dest="image_dir",
-#        default='/Volumes/data/robodata/Josh/GalaxyTEMP/KS-SOD1-GEDI-1/ObjectCrops/original_images/combined_all/train',
-#        help="Directory containing your .tiff images.")
+    #    parser.add_argument(
+    #        "--image_dir",
+    #        type=str,
+    #        dest="image_dir",
+    #        default='/Volumes/data/robodata/Josh/GalaxyTEMP/KS-SOD1-GEDI-1/ObjectCrops/original_images/combined_all/train',
+    #        help="Directory containing your .tiff images.")
     parser.add_argument(
         "--image_dir",
         type=str,
         dest="image_dir",
-        default = '/mnt/finkbeinerlab/robodata/GalaxyTEMP/BSMachineLearning_TestCuration/batches/5',
+        default='/mnt/finkbeinerlab/robodata/JaslinTemp/GalaxyData/LINCS-diMNs/LINCS072017RGEDI-A/Galaxy-wholeplate/Galaxy/CroppedImages',
         help="Directory containing your .tiff images.")
     parser.add_argument(
         "--model_file",

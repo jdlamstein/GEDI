@@ -119,7 +119,7 @@ class model_struct:
         final = tf.identity(self.fc8, name="lrp_output")
         self.prob = tf.nn.softmax(final, name="prob")
 
-        self.data_dict = None
+        # self.data_dict = None
         return self.fc8
 
     def batchnorm(self, layer):

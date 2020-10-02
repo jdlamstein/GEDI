@@ -30,6 +30,17 @@ def crop_center(img, crop_size):
     return img[starty:starty + cy, startx:startx + cx]
 
 
+def pad_image(img, crop_size):
+    x, y = img.shape[:2]
+    cx, cy = crop_size
+    dx = cx -x
+    dy = cy - y
+    assert dx >= 0, 'dx is less than 0'
+    assert dy >= 0, 'dy is less than 0'
+    res = np.zeros((cx,cy, img.shape[-1]), dtype=np.float32)
+    res[int(np.floor(dx/2)):x + int(np.floor(dx/2)), int(np.floor(dy/2)):y + int(np.floor(dy/2)), :] = img
+    return res
+
 def renormalize(img, max_value, min_value):
     return (img - min_value) / (max_value - min_value)
 
@@ -61,7 +72,10 @@ def image_batcher(
                 max_value=training_max,
                 min_value=training_min)
             # 4. Crop the center
-            patch = crop_center(patch, config.model_image_size[:2])
+            if patch.shape[0] > config.model_image_size[0]:
+                patch = crop_center(patch, config.model_image_size[:2])
+            else:
+                patch = pad_image(patch, config.model_image_size[:2])  # added 2020-9-26 Josh,
             # 5. Clip to [0, 1] just in case
             patch[patch > 1.] = 1.
             patch[patch < 0.] = 0.
@@ -171,10 +185,10 @@ def test_vgg16(
         config.validation_batch = len(combined_files)
 
     for idx, c in tqdm(enumerate(ckpts), desc='Running checkpoints'):
-        print('Var dict')
-        print(vgg.var_dict)
-        print('View checkpoint')
-        print(tf.train.list_variables(c))
+        # print('Var dict')
+        # print(vgg.var_dict)
+        # print('View checkpoint')
+        # print(tf.train.list_variables(c))
         dec_scores, yhat, file_array = [], [], []
         # Initialize the graph
         sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True))
@@ -280,7 +294,7 @@ if __name__ == '__main__':
         "--image_dir",
         type=str,
         dest="image_dir",
-        default='/mnt/finkbeinerlab/robodata/JaslinTemp/GalaxyData/LINCS-diMNs/LINCS072017RGEDI-A/Galaxy-wholeplate/Galaxy/CroppedImages',
+        default='/mnt/finkbeinerlab/robodata/AJ_group/AJ-200812-iMN-lipostem-vs-LV/GXYTMP/ObjectCrops',
         help="Directory containing your .tiff images.")
     parser.add_argument(
         "--model_file",

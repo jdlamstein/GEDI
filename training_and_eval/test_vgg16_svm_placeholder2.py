@@ -1,7 +1,16 @@
+"""
+Like test_vgg16_svm_placeholder.py but goes a subdirectory deeper
+
+python training_and_eval/test_vgg16_svm_placeholder2.py --ims=/mnt/finkbeinerlab/robodata/JeremyTEMP/GalaxyTEMP/LINCS072017RGEDI-A/CroppedImages-Voronoi-LINCS072017RGEDI-A/EH --dead_ims=/mnt/finkbeinerlab/robodata/JeremyTEMP/GalaxyTEMP/LINCS072017RGEDI-A/CroppedImages-Voronoi-LINCS072017RGEDI-A/EH --model_file=/mnt/finkbeinerlab/robodata/GEDI_CLUSTER/pretrained_weights/trained_gedi_model/model_58600.ckpt-58600 --output_csv=/mnt/finkbeinerlab/robodata/JeremyTEMP/GalaxyTEMP/LINCS072017RGEDI-A/Output1.csv --trained_svm=/mnt/finkbeinerlab/robodata/JeremyTEMP/GalaxyTEMP/LINCS072017RGEDI-A/T2.1.pkl
+
+python training_and_eval/test_vgg16_svm_placeholder2.py --ims=/mnt/finkbeinerlab/robodata/JeremyTEMP/GalaxyTEMP/LINCS072017RGEDI-A/CroppedImages-Voronoi-LINCS072017RGEDI-A/AD --dead_ims=/mnt/finkbeinerlab/robodata/JeremyTEMP/GalaxyTEMP/LINCS072017RGEDI-A/CroppedImages-Voronoi-LINCS072017RGEDI-A/AD --model_file=/mnt/finkbeinerlab/robodata/GEDI_CLUSTER/pretrained_weights/trained_gedi_model/model_58600.ckpt-58600 --output_csv=/mnt/finkbeinerlab/robodata/JeremyTEMP/GalaxyTEMP/LINCS072017RGEDI-A/Output2.csv --trained_svm=/mnt/finkbeinerlab/robodata/JeremyTEMP/GalaxyTEMP/LINCS072017RGEDI-A/T2.1.pkl
+
+"""
+
 import os
 import time
 import re
-import cPickle
+import pickle
 import tensorflow as tf
 import numpy as np
 import pandas as pd
@@ -106,7 +115,7 @@ def test_vgg16(
     #     raise RuntimeError(
     #         'Cannot find the trained svm model. Check the path you passed.')
     try:
-        clf = cPickle.load(open(trained_svm, 'rb'))
+        clf = pickle.load(open(trained_svm, 'rb'))
         # clf = model_dict['clf']
         # mu = model_dict['mu']
         # sd = model_dict['sd']
@@ -114,8 +123,8 @@ def test_vgg16(
         raise RuntimeError('Cannot find SVM file: %s' % trained_svm)
 
     if dead_ims is not None:
-        live_files = glob(os.path.join(ims, '*%s' % config.raw_im_ext))
-        dead_files = glob(os.path.join(dead_ims, '*%s' % config.raw_im_ext))
+        live_files = glob(os.path.join(ims,'**', '*%s' % config.raw_im_ext))
+        dead_files = glob(os.path.join(dead_ims,'**', '*%s' % config.raw_im_ext))
         combined_labels = np.concatenate((
             np.zeros(len(live_files)),
             np.ones(len(dead_files))))

@@ -212,9 +212,8 @@ def read_and_decode(
     else:
         # Normalize to the max_value
         image /= max_value
-
-    if normalize:  # If we want to ensure all images are [0, 1]
-        image /= tf.reduce_max(image, keep_dims=True)
+    # if normalize:  # If we want to ensure all images are [0, 1]
+    #     image /= tf.reduce_max(image, keep_dims=True)  # commented 11/7/19
     image = tf.squeeze(image)  # had to add this 5/11/17... make sure this is OK
 
     # Insert augmentation and preprocessing here
@@ -261,6 +260,8 @@ def read_and_decode(
         return image, label, gedi_image
     else:
         return image, label
+
+
 
 
 def inputs(

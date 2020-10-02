@@ -77,7 +77,7 @@ def train_vgg16(train_dir=None, validation_dir=None):
 
     # Make output directories if they do not exist
     dt_stamp = re.split(
-        '\.', str(datetime.now()))[0].\
+        '\.', str(datetime.now()))[0]. \
         replace(' ', '_').replace(':', '_').replace('-', '_')
     dt_dataset = config.which_dataset + '_' + dt_stamp + '/'
     config.train_checkpoint = os.path.join(
@@ -90,9 +90,9 @@ def train_vgg16(train_dir=None, validation_dir=None):
     # im_shape = get_image_size(config)
     im_shape = config.gedi_image_size
 
-    print('-'*60)
+    print('-' * 60)
     print('Training model:' + dt_dataset)
-    print('-'*60)
+    print('-' * 60)
 
     # Prepare data on CPU'
     print('train data', train_data)
@@ -190,7 +190,7 @@ def train_vgg16(train_dir=None, validation_dir=None):
                 l2_wd_layers = [
                     x for x in l2_wd_layers if 'biases' not in x.name]
                 cost += (config.wd_penalty * tf.add_n(
-                        [tf.nn.l2_loss(x) for x in l2_wd_layers]))
+                    [tf.nn.l2_loss(x) for x in l2_wd_layers]))
 
             # for all variables in trainable variables
             # print name if there's duplicates you fucked up
@@ -210,10 +210,12 @@ def train_vgg16(train_dir=None, validation_dir=None):
                     config.hold_lr, config.new_lr)
 
             if config.ordinal_classification == 'ordinal':
-                arg_guesses = tf.cast(tf.reduce_sum(tf.squeeze(tf.argmax(res_output, axis=1)), reduction_indices=[1]), tf.int32)
-                train_accuracy = tf.reduce_mean(tf.cast(tf.equal(arg_guesses, train_labels), tf.float32)) 
+                arg_guesses = tf.cast(tf.reduce_sum(tf.squeeze(tf.argmax(res_output, axis=1)), reduction_indices=[1]),
+                                      tf.int32)
+                train_accuracy = tf.reduce_mean(tf.cast(tf.equal(arg_guesses, train_labels), tf.float32))
             elif config.ordinal_classification == 'regression':
-                train_accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.cast(tf.round(vgg.prob), tf.int32), train_labels), tf.float32))
+                train_accuracy = tf.reduce_mean(
+                    tf.cast(tf.equal(tf.cast(tf.round(vgg.prob), tf.int32), train_labels), tf.float32))
             else:
                 train_accuracy = class_accuracy(
                     vgg.prob, train_labels)  # training accuracy
@@ -232,11 +234,13 @@ def train_vgg16(train_dir=None, validation_dir=None):
                 val_vgg.build(val_images, output_shape=vgg_output)
                 # Calculate validation accuracy
                 if config.ordinal_classification == 'ordinal':
-                    val_res_output = tf.reshape(val_vgg.fc8, [config.validation_batch, 2, config.output_shape]) 
-                    val_arg_guesses = tf.cast(tf.reduce_sum(tf.squeeze(tf.argmax(val_res_output, axis=1)), reduction_indices=[1]), tf.int32)
+                    val_res_output = tf.reshape(val_vgg.fc8, [config.validation_batch, 2, config.output_shape])
+                    val_arg_guesses = tf.cast(
+                        tf.reduce_sum(tf.squeeze(tf.argmax(val_res_output, axis=1)), reduction_indices=[1]), tf.int32)
                     val_accuracy = tf.reduce_mean(tf.cast(tf.equal(val_arg_guesses, val_labels), tf.float32))
                 elif config.ordinal_classification == 'regression':
-                    val_accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.cast(tf.round(val_vgg.prob), tf.int32), val_labels), tf.float32))
+                    val_accuracy = tf.reduce_mean(
+                        tf.cast(tf.equal(tf.cast(tf.round(val_vgg.prob), tf.int32), val_labels), tf.float32))
                 else:
                     val_accuracy = class_accuracy(val_vgg.prob, val_labels)
                 tf.summary.scalar("validation accuracy", val_accuracy)
@@ -250,7 +254,7 @@ def train_vgg16(train_dir=None, validation_dir=None):
     sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True))
     # Need to initialize both of these if supplying num_epochs to inputs
     sess.run(tf.group(tf.global_variables_initializer(),
-             tf.local_variables_initializer()))
+                      tf.local_variables_initializer()))
     summary_dir = os.path.join(
         config.train_summaries, config.which_dataset + '_' + dt_stamp)
     summary_writer = tf.summary.FileWriter(summary_dir, sess.graph)
@@ -287,7 +291,7 @@ def train_vgg16(train_dir=None, validation_dir=None):
                     '%s: step %d, loss = %.2f (%.1f examples/sec; '
                     '%.3f sec/batch) | Training accuracy = %s | '
                     'Validation accuracy = %s | logdir = %s')
-                print (format_str % (
+                print(format_str % (
                     datetime.now(), step, loss_value,
                     config.train_batch / duration, float(duration),
                     train_acc, val_acc, summary_dir))
@@ -305,9 +309,9 @@ def train_vgg16(train_dir=None, validation_dir=None):
                 # Training status
                 format_str = ('%s: step %d, loss = %.2f (%.1f examples/sec; '
                               '%.3f sec/batch) | Training accuracy = %s')
-                print (format_str % (datetime.now(), step, loss_value,
-                                     config.train_batch / duration,
-                                     float(duration), train_acc))
+                print(format_str % (datetime.now(), step, loss_value,
+                                    config.train_batch / duration,
+                                    float(duration), train_acc))
             # End iteration
             step += 1
 
