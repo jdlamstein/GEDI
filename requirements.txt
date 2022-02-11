@@ -7,7 +7,7 @@ nilearn==0.1.4.post1
 numpy==1.12.1
 pandas==0.20.2
 pbr==1.10.0
-protobuf==3.2.0
+protobuf==3.15.0
 pyparsing==2.1.4
 python-dateutil==2.6.0
 pytz==2017.2
