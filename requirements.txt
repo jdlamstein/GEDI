@@ -4,7 +4,7 @@ functools32==3.2.3.post2
 matplotlib==2.0.2
 mock==2.0.0
 nilearn==0.1.4.post1
-numpy==1.12.1
+numpy==1.21.0
 pandas==0.20.2
 pbr==1.10.0
 protobuf==3.2.0
